@@ -1,0 +1,27 @@
+# DataGuardian AI — backend runtime dependencies (Python 3.12)
+# Pinned with `>=,<` so `pip install -r` is reproducible across machines while
+# still picking up patch releases.
+
+# --- Web framework -----------------------------------------------------------
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.32,<1.0
+pydantic>=2.9,<3.0
+pydantic-settings>=2.6,<3.0
+
+# --- Persistence -------------------------------------------------------------
+sqlalchemy>=2.0,<3.0
+psycopg2-binary>=2.9,<3.0
+alembic>=1.14,<2.0
+
+# --- Scheduling --------------------------------------------------------------
+apscheduler>=3.10,<4.0
+
+# --- Outbound HTTP (DataHub / MCP calls) -------------------------------------
+httpx>=0.27,<1.0
+
+# --- AI ----------------------------------------------------------------------
+langgraph>=0.2,<1.0
+google-generativeai>=0.8,<1.0
+
+# --- Configuration -----------------------------------------------------------
+python-dotenv>=1.0,<2.0

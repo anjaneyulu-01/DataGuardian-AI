@@ -1,0 +1,16 @@
+# The Dockerfiles in docker/ build from the repository root, so this file must
+# live here to take effect.
+.git/
+.github/
+docs/
+architecture/
+scripts/
+**/node_modules/
+**/dist/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.env
+**/*.log

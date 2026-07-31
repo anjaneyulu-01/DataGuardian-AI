@@ -1,0 +1,89 @@
+# DataGuardian AI — local development stack.
+#
+# Scaffolding only: PostgreSQL, the FastAPI backend, and the Vite frontend.
+# DataHub and the MCP server are intentionally NOT configured yet; their
+# service definitions are stubbed out at the bottom of this file.
+#
+#   docker compose up --build
+#   docker compose down -v      # also drops the database volume
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: dataguardian-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dataguardian}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dataguardian}
+      POSTGRES_DB: ${POSTGRES_DB:-dataguardian}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # Backend waits on this so it never starts against a database that is
+      # still initialising.
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-dataguardian}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [dataguardian]
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: dataguardian-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: local
+      DEBUG: 'true'
+      # Host is the compose service name, not localhost.
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-dataguardian}:${POSTGRES_PASSWORD:-dataguardian}@db:5432/${POSTGRES_DB:-dataguardian}
+      CORS_ORIGINS: '["http://localhost:5173"]'
+      SCHEDULER_ENABLED: 'false'
+    ports:
+      - '8000:8000'
+    volumes:
+      # Live reload during development; drop this in a deployed environment.
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks: [dataguardian]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    container_name: dataguardian-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_BACKEND_URL: http://backend:8000
+    ports:
+      - '5173:5173'
+    volumes:
+      - ./frontend:/app
+      # Anonymous volume keeps the image's node_modules from being shadowed by
+      # the host bind mount above.
+      - /app/node_modules
+    networks: [dataguardian]
+
+  # --- Placeholders — not configured yet --------------------------------------
+  #
+  # datahub:
+  #   DataHub is deployed via its own quickstart compose file rather than being
+  #   inlined here. See `datahub/README.md`.
+  #
+  # mcp-server:
+  #   DataHub MCP server exposing metadata as agent tools.
+
+volumes:
+  postgres_data:
+
+networks:
+  dataguardian:
+    driver: bridge

@@ -1,0 +1,37 @@
+@import 'tailwindcss';
+
+/* React Flow ships its own stylesheet; it must be loaded for nodes and edges to
+   position correctly. Imported here so no individual page has to remember it. */
+@import '@xyflow/react/dist/style.css';
+
+/* Design tokens. Referenced from Tailwind utilities as `bg-surface`,
+   `text-muted`, `border-line`, etc. Extend this block rather than scattering
+   raw color values through components. */
+@theme {
+  --color-canvas: oklch(21% 0.02 260);
+  --color-surface: oklch(26% 0.02 260);
+  --color-line: oklch(35% 0.02 260);
+  --color-ink: oklch(97% 0.005 260);
+  --color-muted: oklch(72% 0.02 260);
+  --color-brand: oklch(70% 0.15 230);
+
+  /* Governance severity scale, used later by findings and charts. */
+  --color-severity-low: oklch(75% 0.13 150);
+  --color-severity-medium: oklch(80% 0.14 85);
+  --color-severity-high: oklch(70% 0.16 45);
+  --color-severity-critical: oklch(65% 0.19 20);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
