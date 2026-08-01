@@ -1,2 +1,6 @@
 export { apiClient, toErrorMessage } from './apiClient'
-export { fetchHealth } from './healthService'
+export {
+  fetchApiHealth,
+  fetchDataHubStatus,
+  type DataHubStatus,
+} from './systemService'

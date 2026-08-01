@@ -243,11 +243,18 @@ Both run automatically on every push and pull request via
 
 ### Phase 2 — DataHub integration
 
-- [ ] Connect to DataHub GMS and the MCP server
+- [x] GraphQL integration layer (`backend/app/integrations/datahub/`) — typed
+      client, queries, models, mapper, and service
+- [x] Read endpoints: datasets, owners, domains, lineage, statistics
+- [x] Connectivity probe at `/api/v1/health/datahub`
+- [ ] **Validate the GraphQL documents against a live DataHub** — built and
+      tested against a mock transport; see the `TODO(datahub)` comments in
+      `queries.py`
+- [ ] Connect to the DataHub MCP server
 - [ ] Ingest sample metadata for the demo
 - [ ] Model assets, findings, and audit records in PostgreSQL
 - [ ] Alembic migrations
-- [ ] Asset browsing endpoints and UI
+- [ ] Asset browsing UI
 
 ### Phase 3 — Detection
 

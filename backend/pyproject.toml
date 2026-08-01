@@ -12,6 +12,24 @@ select = ["E", "F", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
 
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency and parameter markers are meant to be evaluated once, in
+# the argument default — that is the framework's documented idiom, not the
+# mutable-default bug B008 exists to catch.
+extend-immutable-calls = [
+    "fastapi.Body",
+    "fastapi.Depends",
+    "fastapi.Header",
+    "fastapi.Path",
+    "fastapi.Query",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests reach into mapper internals on purpose: the private helpers are where
+# the null-safety guarantees live, and testing them through six layers of
+# public API would obscure what is actually being asserted.
+"tests/*" = ["SLF001"]
+
 [tool.mypy]
 python_version = "3.12"
 plugins = ["pydantic.mypy"]

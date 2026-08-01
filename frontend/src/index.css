@@ -1,25 +1,104 @@
+@import '@fontsource-variable/inter';
 @import 'tailwindcss';
 
-/* React Flow ships its own stylesheet; it must be loaded for nodes and edges to
-   position correctly. Imported here so no individual page has to remember it. */
+/* React Flow base styles — required for node/edge positioning. */
 @import '@xyflow/react/dist/style.css';
 
-/* Design tokens. Referenced from Tailwind utilities as `bg-surface`,
-   `text-muted`, `border-line`, etc. Extend this block rather than scattering
-   raw color values through components. */
-@theme {
-  --color-canvas: oklch(21% 0.02 260);
-  --color-surface: oklch(26% 0.02 260);
-  --color-line: oklch(35% 0.02 260);
-  --color-ink: oklch(97% 0.005 260);
-  --color-muted: oklch(72% 0.02 260);
-  --color-brand: oklch(70% 0.15 230);
+/* ---------------------------------------------------------------------------
+ * Theme tokens.
+ *
+ * Semantic names only — components never reference raw hex values. The app is
+ * dark-first (the product surface judges see); a light variant exists behind
+ * the same semantic tokens so the topbar toggle works without any component
+ * knowing about it.
+ * ------------------------------------------------------------------------- */
 
-  /* Governance severity scale, used later by findings and charts. */
-  --color-severity-low: oklch(75% 0.13 150);
-  --color-severity-medium: oklch(80% 0.14 85);
-  --color-severity-high: oklch(70% 0.16 45);
-  --color-severity-critical: oklch(65% 0.19 20);
+:root,
+:root[data-theme='dark'] {
+  /* Surfaces, darkest to most elevated. */
+  --t-canvas: oklch(16% 0.014 262);
+  --t-surface: oklch(19.5% 0.016 262);
+  --t-raised: oklch(23% 0.018 262);
+  --t-overlay: oklch(26% 0.02 262);
+
+  /* Lines and text. */
+  --t-line: oklch(30% 0.02 262);
+  --t-line-strong: oklch(38% 0.024 262);
+  --t-ink: oklch(96% 0.005 250);
+  --t-ink-secondary: oklch(80% 0.014 255);
+  --t-muted: oklch(64% 0.02 258);
+  --t-faint: oklch(48% 0.02 260);
+
+  /* Brand + status. Restrained: blue/cyan/emerald, red only for critical. */
+  --t-brand: oklch(66% 0.17 258);
+  --t-brand-strong: oklch(72% 0.16 254);
+  --t-cyan: oklch(78% 0.12 210);
+  --t-emerald: oklch(74% 0.14 165);
+  --t-amber: oklch(80% 0.13 80);
+  --t-red: oklch(68% 0.17 22);
+
+  --t-glass: oklch(23% 0.018 262 / 0.66);
+  --t-shadow: 0 1px 2px oklch(0% 0 0 / 0.28), 0 8px 24px -12px oklch(0% 0 0 / 0.5);
+  --t-shadow-lg: 0 2px 6px oklch(0% 0 0 / 0.3), 0 20px 48px -16px oklch(0% 0 0 / 0.55);
+  --t-glow-brand: 0 0 0 1px oklch(66% 0.17 258 / 0.28), 0 8px 32px -8px oklch(66% 0.17 258 / 0.34);
+
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --t-canvas: oklch(97.5% 0.004 255);
+  --t-surface: oklch(100% 0 0);
+  --t-raised: oklch(98.5% 0.003 255);
+  --t-overlay: oklch(96% 0.005 255);
+
+  --t-line: oklch(90% 0.008 255);
+  --t-line-strong: oklch(84% 0.012 255);
+  --t-ink: oklch(22% 0.02 262);
+  --t-ink-secondary: oklch(36% 0.02 260);
+  --t-muted: oklch(52% 0.02 258);
+  --t-faint: oklch(66% 0.016 258);
+
+  --t-brand: oklch(54% 0.19 258);
+  --t-brand-strong: oklch(48% 0.2 258);
+  --t-cyan: oklch(60% 0.12 210);
+  --t-emerald: oklch(58% 0.14 165);
+  --t-amber: oklch(66% 0.14 75);
+  --t-red: oklch(56% 0.2 24);
+
+  --t-glass: oklch(100% 0 0 / 0.72);
+  --t-shadow: 0 1px 2px oklch(0% 0 0 / 0.05), 0 8px 24px -12px oklch(0% 0 0 / 0.12);
+  --t-shadow-lg: 0 2px 6px oklch(0% 0 0 / 0.06), 0 20px 48px -16px oklch(0% 0 0 / 0.16);
+  --t-glow-brand: 0 0 0 1px oklch(54% 0.19 258 / 0.22), 0 8px 32px -8px oklch(54% 0.19 258 / 0.25);
+
+  color-scheme: light;
+}
+
+/* Map semantic tokens into Tailwind utilities (bg-surface, text-muted, …). */
+@theme inline {
+  --color-canvas: var(--t-canvas);
+  --color-surface: var(--t-surface);
+  --color-raised: var(--t-raised);
+  --color-overlay: var(--t-overlay);
+  --color-line: var(--t-line);
+  --color-line-strong: var(--t-line-strong);
+  --color-ink: var(--t-ink);
+  --color-ink-secondary: var(--t-ink-secondary);
+  --color-muted: var(--t-muted);
+  --color-faint: var(--t-faint);
+  --color-brand: var(--t-brand);
+  --color-brand-strong: var(--t-brand-strong);
+  --color-accent: var(--t-cyan);
+  --color-positive: var(--t-emerald);
+  --color-warning: var(--t-amber);
+  --color-critical: var(--t-red);
+
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-card: var(--t-shadow);
+  --shadow-pop: var(--t-shadow-lg);
+  --shadow-glow: var(--t-glow-brand);
+
+  --radius-card: 0.875rem;
 }
 
 html,
@@ -30,8 +109,106 @@ body,
 
 body {
   margin: 0;
-  background-color: var(--color-canvas);
-  color: var(--color-ink);
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background-color: var(--t-canvas);
+  color: var(--t-ink);
+  font-family: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Subtle ambient gradient behind the whole app — gives depth without noise. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(56rem 32rem at 12% -8%, oklch(from var(--t-brand) l c h / 0.07), transparent 62%),
+    radial-gradient(48rem 30rem at 96% 4%, oklch(from var(--t-cyan) l c h / 0.05), transparent 60%);
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* Scrollbars that match the theme. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--t-line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--t-line-strong);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Shared surfaces --------------------------------------------------------- */
+
+@utility card {
+  background-color: var(--t-surface);
+  border: 1px solid var(--t-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--t-shadow);
+}
+
+@utility glass {
+  background-color: var(--t-glass);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  border-bottom: 1px solid var(--t-line);
+}
+
+/* React Flow re-skin so the graph belongs to the product. */
+.react-flow {
+  background: transparent;
+}
+.react-flow__attribution {
+  background: transparent;
+  color: var(--t-faint);
+}
+.react-flow__edge-path {
+  stroke: var(--t-line-strong);
+  stroke-width: 1.5;
+}
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:focus .react-flow__edge-path {
+  stroke: var(--t-brand);
+}
+.react-flow__controls {
+  background: var(--t-raised);
+  border: 1px solid var(--t-line);
+  border-radius: 10px;
+  box-shadow: var(--t-shadow);
+  overflow: hidden;
+}
+.react-flow__controls-button {
+  background: transparent;
+  border-bottom: 1px solid var(--t-line);
+  fill: var(--t-muted);
+}
+.react-flow__controls-button:hover {
+  background: var(--t-overlay);
+  fill: var(--t-ink);
+}
+.react-flow__minimap {
+  background: var(--t-raised);
+  border: 1px solid var(--t-line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Focus rings — keyboard accessible, on brand. */
+:focus-visible {
+  outline: 2px solid var(--t-brand);
+  outline-offset: 2px;
+  border-radius: 6px;
 }

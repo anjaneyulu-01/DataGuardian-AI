@@ -3,6 +3,12 @@
 Guides for people using or contributing to DataGuardian AI. System design
 records live in [`../architecture/`](../architecture/).
 
+## Contents
+
+| File | Purpose |
+| --- | --- |
+| [`datahub.md`](datahub.md) | DataHub integration: architecture, auth, adding queries, debugging |
+
 ## Planned
 
 | File | Purpose |
