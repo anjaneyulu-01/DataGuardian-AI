@@ -1,0 +1,35 @@
+<!--
+  Square mark, 256x256. SVG so the README hero renders correctly from a fresh
+  clone with no build step and no binary in git. Brand tokens match
+  frontend/src/index.css.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="DataGuardian AI">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f1219"/>
+      <stop offset="100%" stop-color="#1a2233"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5b8cff"/>
+      <stop offset="100%" stop-color="#4dd8e8"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <rect x="1" y="1" width="254" height="254" rx="55" fill="none"
+        stroke="url(#accent)" stroke-opacity="0.3" stroke-width="2"/>
+
+  <!-- Shield: governance. The node inside it: metadata. -->
+  <g transform="translate(64, 52)">
+    <path d="M64 0 L122 22 V70 c0 42-25 72-58 88 C31 142 6 112 6 70 V22 Z"
+          fill="url(#accent)" fill-opacity="0.14"
+          stroke="url(#accent)" stroke-width="6" stroke-linejoin="round"/>
+    <!-- Lineage: one upstream, two downstream -->
+    <circle cx="64" cy="70" r="14" fill="#4dd8e8"/>
+    <path d="M64 30 v26 M40 104 l16 -20 M88 104 l-16 -20"
+          stroke="#4dd8e8" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="64" cy="26" r="6" fill="#5b8cff"/>
+    <circle cx="37" cy="108" r="6" fill="#5b8cff"/>
+    <circle cx="91" cy="108" r="6" fill="#5b8cff"/>
+  </g>
+</svg>

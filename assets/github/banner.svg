@@ -1,0 +1,75 @@
+<!--
+  README hero, 1280x320. SVG rather than PNG so a fresh clone renders correctly
+  with no build step and no binary committed. Replace with a product shot at
+  the same dimensions if you prefer the real UI in the hero — the README path
+  stays the same.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="DataGuardian AI — deterministic rules decide what is wrong, the AI only explains it">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f1219"/>
+      <stop offset="100%" stop-color="#151b28"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5b8cff"/>
+      <stop offset="100%" stop-color="#4dd8e8"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="18%" cy="0%" r="80%">
+      <stop offset="0%" stop-color="#5b8cff" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#5b8cff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1280" height="320" fill="url(#bg)"/>
+  <rect width="1280" height="320" fill="url(#glow)"/>
+  <rect y="317" width="1280" height="3" fill="url(#accent)" fill-opacity="0.6"/>
+
+  <!-- Shield mark -->
+  <g transform="translate(72, 108)">
+    <path d="M42 0 L80 14 V44 c0 26-16 45-38 55 C20 89 4 70 4 44 V14 Z"
+          fill="url(#accent)" fill-opacity="0.16"
+          stroke="url(#accent)" stroke-width="3.5" stroke-linejoin="round"/>
+    <circle cx="42" cy="44" r="9" fill="#4dd8e8"/>
+    <path d="M42 19 v16 M26 66 l10 -13 M58 66 l-10 -13"
+          stroke="#4dd8e8" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+
+  <text x="188" y="126" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="54" font-weight="700" fill="#f2f4f8">
+    DataGuardian AI
+  </text>
+  <text x="188" y="166" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="24" font-weight="500" fill="#8b93a7">
+    An autonomous AI Metadata Governance Engineer, built on DataHub
+  </text>
+
+  <g transform="translate(188, 196)">
+    <rect x="0" y="0" width="640" height="52" rx="12"
+          fill="#5b8cff" fill-opacity="0.08" stroke="#5b8cff" stroke-opacity="0.28"/>
+    <text x="22" y="33" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="19" font-weight="500" fill="#c9d2e3">
+      Deterministic rules decide what is wrong. The AI only explains it.
+    </text>
+  </g>
+
+  <!-- Verified counts only -->
+  <g font-family="Inter, Segoe UI, system-ui, sans-serif" text-anchor="middle">
+    <g transform="translate(920, 128)">
+      <text y="0" font-size="34" font-weight="700" fill="url(#accent)">9</text>
+      <text y="24" font-size="14" fill="#6c7689">AGENT NODES</text>
+    </g>
+    <g transform="translate(1040, 128)">
+      <text y="0" font-size="34" font-weight="700" fill="url(#accent)">6</text>
+      <text y="24" font-size="14" fill="#6c7689">RISK RULES</text>
+    </g>
+    <g transform="translate(1160, 128)">
+      <text y="0" font-size="34" font-weight="700" fill="url(#accent)">5</text>
+      <text y="24" font-size="14" fill="#6c7689">LLM PROVIDERS</text>
+    </g>
+    <g transform="translate(980, 216)">
+      <text y="0" font-size="34" font-weight="700" fill="url(#accent)">12</text>
+      <text y="24" font-size="14" fill="#6c7689">GRAPHQL DOCS</text>
+    </g>
+    <g transform="translate(1112, 216)">
+      <text y="0" font-size="34" font-weight="700" fill="url(#accent)">293</text>
+      <text y="24" font-size="14" fill="#6c7689">TESTS</text>
+    </g>
+  </g>
+</svg>
