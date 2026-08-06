@@ -5,12 +5,13 @@ once, at import time, and validated by Pydantic. Modules should import the
 ``settings`` singleton rather than calling ``os.getenv`` directly.
 """
 
+import json
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import AliasChoices, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import AliasChoices, Field, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # The repository root, resolved from this file rather than the working
 # directory: backend/app/config/settings.py -> config -> app -> backend -> root.
@@ -38,20 +39,58 @@ class Settings(BaseSettings):
     # --- Application ---------------------------------------------------------
     project_name: str = "DataGuardian AI"
     version: str = "0.1.0"
-    environment: Literal["local", "development", "staging", "production"] = "local"
-    debug: bool = True
+    # `APP_ENV` is accepted as an alias because that is the conventional name
+    # on most PaaS platforms, Render included.
+    environment: Literal["local", "development", "staging", "production"] = Field(
+        default="local",
+        validation_alias=AliasChoices(
+            "ENVIRONMENT", "APP_ENV", "environment", "app_env"
+        ),
+    )
+    # Left unset, this follows the environment rather than defaulting to True:
+    # a production deploy that forgets to set DEBUG must not emit DEBUG logs or
+    # verbose errors. Set it explicitly only to override.
+    debug: bool | None = None
     api_v1_prefix: str = "/api/v1"
 
     # --- Server --------------------------------------------------------------
     host: str = "0.0.0.0"
-    port: int = 8000
+    # Render (and most PaaS) inject the bound port as $PORT.
+    port: int = Field(default=8000, validation_alias=AliasChoices("PORT", "port"))
 
     # --- CORS ----------------------------------------------------------------
-    # Origins allowed to call the API from a browser. The Vite dev server runs
-    # on 5173; add deployed frontend origins here.
-    cors_origins: list[str] = Field(
+    # Browser origins allowed to call this API. The Vite dev server runs on
+    # 5173; a deployed frontend MUST be added here or every request fails
+    # pre-flight. Accepts a JSON array or a comma-separated list, because
+    # PaaS dashboards make JSON awkward to type.
+    #
+    # Never widened to "*": these endpoints expose catalogue metadata, and a
+    # wildcard would let any page on the internet read it from a logged-in
+    # browser.
+    # `NoDecode` is required, not cosmetic: without it pydantic-settings runs
+    # `json.loads` on any list-typed env var BEFORE field validators, so a
+    # comma-separated value raises SettingsError at import and the process
+    # never starts. NoDecode hands the raw string to the validator below.
+    cors_origins: Annotated[list[str], NoDecode] = Field(
         default=["http://localhost:5173", "http://127.0.0.1:5173"]
     )
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _split_cors_origins(cls, value: object) -> object:
+        """Accept `a,b` as well as `["a","b"]`.
+
+        Render's env editor is a single-line text field; requiring valid JSON
+        there is a reliable way to produce a deploy that fails only in the
+        browser, long after the build went green.
+        """
+        if isinstance(value, str):
+            text = value.strip()
+            if text.startswith("["):
+                # Still allow the JSON form NoDecode just turned off.
+                return json.loads(text)
+            return [origin.strip() for origin in text.split(",") if origin.strip()]
+        return value
 
     # --- Database ------------------------------------------------------------
     database_url: str = (
@@ -194,9 +233,36 @@ class Settings(BaseSettings):
         return self.environment == "production"
 
     @property
+    def debug_enabled(self) -> bool:
+        """Whether to run in debug mode.
+
+        Follows the environment unless `DEBUG` was set explicitly. Deriving it
+        means a production deploy cannot accidentally ship DEBUG-level logging
+        just because nobody remembered to turn it off.
+        """
+        if self.debug is not None:
+            return self.debug
+        return not self.is_production
+
+    @property
     def datahub_graphql_url(self) -> str:
         """Fully-qualified GraphQL endpoint."""
         return f"{self.datahub_gms_url.rstrip('/')}{self.datahub_graphql_path}"
+
+    @property
+    def cors_misconfigured(self) -> bool:
+        """True when running in production with only localhost origins allowed.
+
+        The single most common deployment failure: the build goes green, the
+        health check passes, and every browser request fails pre-flight. The
+        lifespan logs a loud warning when this is true.
+        """
+        if not self.is_production:
+            return False
+        return all(
+            origin.startswith(("http://localhost", "http://127.0.0.1"))
+            for origin in self.cors_origins
+        )
 
 
 @lru_cache

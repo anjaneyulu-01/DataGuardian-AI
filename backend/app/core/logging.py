@@ -20,7 +20,9 @@ _NOISY_LIBRARIES = ("httpcore", "httpx", "hpack", "apscheduler.scheduler")
 
 def configure_logging() -> None:
     """Attach a single stdout handler to the root logger."""
-    level = logging.DEBUG if settings.debug else logging.INFO
+    # `debug_enabled` derives from the environment when DEBUG is unset, so a
+    # production deploy never ships DEBUG-level logging by omission.
+    level = logging.DEBUG if settings.debug_enabled else logging.INFO
 
     root = logging.getLogger()
     root.setLevel(level)

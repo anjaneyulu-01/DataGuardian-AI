@@ -33,11 +33,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Start and stop process-wide resources around the server's lifetime."""
     configure_logging()
     logger.info(
-        "Starting %s v%s (environment=%s)",
+        "Starting %s v%s (environment=%s, debug=%s)",
         settings.project_name,
         settings.version,
         settings.environment,
+        settings.debug_enabled,
     )
+
+    # The most common deployment failure: the service boots, the health check
+    # passes, and every browser request dies at CORS pre-flight. Fail loudly at
+    # startup rather than leaving it to be discovered in a browser console.
+    if settings.cors_misconfigured:
+        logger.error(
+            "CORS is production-misconfigured: only localhost origins are "
+            "allowed (%s). Every request from the deployed frontend will fail "
+            "pre-flight. Set CORS_ORIGINS to your frontend origin, e.g. "
+            "CORS_ORIGINS=https://dataguardian.onrender.com",
+            ", ".join(settings.cors_origins),
+        )
 
     # One DataHub client per process, sharing a connection pool across all
     # requests. Constructing it never performs I/O, so a DataHub that is down

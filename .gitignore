@@ -3,7 +3,11 @@
 # ---------------------------------------------------------------------------
 .env
 .env.*
+# Templates carry blank values only and MUST be committed — without these
+# negations `.env.*` above swallows them and the deployment guide references
+# a file that is not in the repository.
 !.env.example
+!.env.production.example
 *.pem
 *.key
 

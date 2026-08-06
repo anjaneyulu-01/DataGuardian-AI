@@ -1,0 +1,60 @@
+<!--
+  Social card, 1200x630. SVG rather than PNG so it stays a few KB and needs no
+  build step; every major platform rasterises it. Swap for a real screenshot
+  before submission if you want the UI itself in the preview.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="DataGuardian AI">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f1219"/>
+      <stop offset="100%" stop-color="#151b28"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5b8cff"/>
+      <stop offset="100%" stop-color="#4dd8e8"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="0%" r="70%">
+      <stop offset="0%" stop-color="#5b8cff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#5b8cff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+
+  <!-- Shield mark -->
+  <g transform="translate(96, 232)">
+    <path d="M40 0 L76 14 V40 c0 24-15.5 42-36 51 C19.5 82 4 64 4 40 V14 Z"
+          fill="url(#accent)" fill-opacity="0.16"
+          stroke="url(#accent)" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="40" cy="40" r="8" fill="#4dd8e8"/>
+    <path d="M40 48 v14 M27 34 l7 4 M53 34 l-7 4"
+          stroke="#4dd8e8" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+
+  <text x="208" y="272" font-family="Inter, system-ui, sans-serif" font-size="62" font-weight="700" fill="#f2f4f8">
+    DataGuardian AI
+  </text>
+  <text x="208" y="326" font-family="Inter, system-ui, sans-serif" font-size="30" font-weight="500" fill="#8b93a7">
+    Autonomous metadata governance for DataHub
+  </text>
+
+  <!-- The claim that differentiates the project -->
+  <g transform="translate(208, 372)">
+    <rect x="0" y="0" width="740" height="72" rx="14"
+          fill="#5b8cff" fill-opacity="0.08" stroke="#5b8cff" stroke-opacity="0.28"/>
+    <text x="26" y="45" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="500" fill="#c9d2e3">
+      Deterministic rules decide what is wrong. The AI only explains it.
+    </text>
+  </g>
+
+  <g transform="translate(208, 490)" font-family="Inter, system-ui, sans-serif" font-size="21" fill="#6c7689">
+    <text x="0" y="0">LangGraph agent</text>
+    <text x="196" y="0">·</text>
+    <text x="220" y="0">FastAPI</text>
+    <text x="330" y="0">·</text>
+    <text x="354" y="0">React 19</text>
+    <text x="474" y="0">·</text>
+    <text x="498" y="0">293 tests</text>
+  </g>
+</svg>

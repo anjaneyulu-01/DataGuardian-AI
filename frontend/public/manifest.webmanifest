@@ -1,0 +1,17 @@
+{
+  "name": "DataGuardian AI",
+  "short_name": "DataGuardian",
+  "description": "Autonomous AI metadata governance engineer for DataHub.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1219",
+  "theme_color": "#0f1219",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

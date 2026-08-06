@@ -2,16 +2,71 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>DataGuardian AI — Autonomous Metadata Governance</title>
     <meta
       name="description"
-      content="Autonomous AI agent that monitors DataHub metadata for governance issues."
+      content="An autonomous AI governance engineer for DataHub. Finds missing owners, untagged PII, and stale assets — then explains why each one matters."
     />
-    <title>DataGuardian AI</title>
+    <meta name="theme-color" content="#0f1219" />
+
+    <!-- Dark-first, but declare both so the browser does not flash a white
+         background before the CSS loads. -->
+    <meta name="color-scheme" content="dark light" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Open Graph — controls the card when the demo link is shared with
+         judges on Devpost, Slack, or X. -->
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="DataGuardian AI — Autonomous Metadata Governance"
+    />
+    <meta
+      property="og:description"
+      content="Deterministic rules decide what is wrong. The AI only explains it. Built on DataHub."
+    />
+    <meta property="og:image" content="/og-image.svg" />
+    <meta property="og:site_name" content="DataGuardian AI" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="DataGuardian AI — Autonomous Metadata Governance"
+    />
+    <meta
+      name="twitter:description"
+      content="Deterministic rules decide what is wrong. The AI only explains it. Built on DataHub."
+    />
+    <meta name="twitter:image" content="/og-image.svg" />
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Visible only if the bundle fails to execute — a blank dark page is
+         indistinguishable from a slow load, which is the worst thing a judge
+         can encounter. -->
+    <noscript>
+      <div
+        style="
+          font-family: system-ui, sans-serif;
+          color: #e8eaf0;
+          background: #0f1219;
+          padding: 3rem 1.5rem;
+          text-align: center;
+        "
+      >
+        <h1 style="font-size: 1.1rem">DataGuardian AI requires JavaScript</h1>
+        <p style="color: #8b93a7; font-size: 0.9rem">
+          Enable JavaScript to load the governance workspace.
+        </p>
+      </div>
+    </noscript>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

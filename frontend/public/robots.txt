@@ -1,0 +1,3 @@
+# DataGuardian AI — public demo deployment.
+User-agent: *
+Allow: /

@@ -1,0 +1,144 @@
+# Render Blueprint — DataGuardian AI
+#
+# Deploys two services from this repository:
+#   1. dataguardian-api  — FastAPI backend  (Web Service)
+#   2. dataguardian-web  — React frontend   (Static Site)
+#
+# Apply with: Render Dashboard → New → Blueprint → point at this repo.
+# Full walkthrough, including the chicken-and-egg URL problem: docs/deployment.md
+#
+# Secrets are deliberately declared with `sync: false`, which makes Render
+# prompt for them at deploy time instead of storing them in git.
+
+services:
+  # ---------------------------------------------------------------------------
+  # Backend — FastAPI
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: dataguardian-api
+    runtime: python
+    plan: free
+    region: oregon
+    rootDir: backend
+    # `--no-cache-dir` keeps the free tier's small disk from filling with wheels.
+    buildCommand: pip install --no-cache-dir -r requirements.txt
+    # $PORT is injected by Render and must be honoured or the deploy is marked
+    # unhealthy. One worker: the free tier has 512 MB, and the app is async, so
+    # concurrency comes from the event loop rather than from processes.
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+    # Liveness only — deliberately does NOT touch DataHub or the LLM, so a
+    # third-party outage can never cause Render to restart a healthy API.
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: '3.12.10'
+
+      # --- Application ---
+      - key: APP_ENV
+        value: production
+      # Unset DEBUG deliberately: `debug_enabled` derives it from APP_ENV, so
+      # production cannot ship DEBUG logging by omission.
+
+      # --- CORS ---
+      # MUST match the deployed frontend origin exactly (scheme + host, no
+      # trailing slash) or every browser request fails pre-flight.
+      # Chicken-and-egg: the frontend URL does not exist until its first deploy,
+      # so set this afterwards — see docs/deployment.md step 4.
+      - key: CORS_ORIGINS
+        sync: false
+
+      # --- LLM ---
+      # `auto` picks the first provider with a key, so adding a second key gives
+      # automatic fail-over with no redeploy of application code.
+      - key: LLM_PROVIDER
+        value: auto
+      - key: LLM_FALLBACK_ENABLED
+        value: 'true'
+      - key: LLM_TIMEOUT
+        value: '60'
+      - key: LLM_MAX_TOKENS
+        value: '4096'
+      - key: LLM_TEMPERATURE
+        value: '0.2'
+      # At least one of these is required for AI features. The app still boots
+      # without them; /api/v1/health/llm reports configured=false.
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: XAI_API_KEY
+        sync: false
+
+      # --- DataHub ---
+      # Must be reachable from Render. A DataHub on localhost is NOT — see the
+      # "DataHub is not publicly reachable" section of docs/deployment.md.
+      # Left unset, the API runs and reports DataHub as unreachable, and the
+      # frontend falls back to Demo Mode with a visible banner.
+      - key: DATAHUB_GMS_URL
+        sync: false
+      - key: DATAHUB_TOKEN
+        sync: false
+      - key: DATAHUB_TIMEOUT_SECONDS
+        value: '30'
+      - key: DATAHUB_CACHE_ENABLED
+        value: 'true'
+      - key: DATAHUB_CACHE_TTL_SECONDS
+        value: '60'
+
+      # --- Scheduler ---
+      # Off in production: Render's free tier spins the service down when idle,
+      # so a background scanner would run unpredictably.
+      - key: SCHEDULER_ENABLED
+        value: 'false'
+
+  # ---------------------------------------------------------------------------
+  # Frontend — React static site
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: dataguardian-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+
+    envVars:
+      - key: NODE_VERSION
+        value: '22'
+      # Backend origin + /api. Service calls append /v1/... themselves.
+      # Vite INLINES this at build time, so changing it requires a rebuild,
+      # not just a restart. `fromService` resolves the sibling's URL
+      # automatically, so there is nothing to paste by hand.
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: dataguardian-api
+          envVarKey: RENDER_EXTERNAL_URL
+
+    # SPA fallback: React Router owns the routes, so any unmatched path must
+    # serve index.html or a refresh on /governance returns 404.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+    headers:
+      # Hashed asset filenames are content-addressed, so they can be cached
+      # forever. index.html must never be, or a deploy would not be picked up.
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
