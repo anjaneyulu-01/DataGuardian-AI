@@ -7,7 +7,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 
-import { StatusBadge } from './StatusBadge'
+import { RiskBadge } from './RiskBadge'
 import type { AIAnswer } from '@/types/domain'
 import { cn } from '@/utils'
 import { SEVERITY } from '@/utils/severity'
@@ -15,6 +15,12 @@ import { SEVERITY } from '@/utils/severity'
 interface AIResponseProps {
   answer: AIAnswer
   onAction?: (action: string) => void
+  /**
+   * Rendered inside the card, below the sections. Used for the agent's
+   * execution trace, which belongs to the same visual unit as the answer it
+   * describes rather than floating beneath it.
+   */
+  footer?: React.ReactNode
 }
 
 const sectionVariants = {
@@ -31,7 +37,7 @@ const sectionVariants = {
  * recommendation → actions. Sections stagger in to read like the agent is
  * reporting, not like a page loaded.
  */
-export function AIResponse({ answer, onAction }: AIResponseProps) {
+export function AIResponse({ answer, onAction, footer }: AIResponseProps) {
   return (
     <div className="card overflow-hidden">
       {/* Question echo. */}
@@ -65,7 +71,7 @@ export function AIResponse({ answer, onAction }: AIResponseProps) {
               SEVERITY[answer.risk.level].bg,
             )}
           >
-            <StatusBadge severity={answer.risk.level} />
+            <RiskBadge severity={answer.risk.level} />
             <p className="text-ink-secondary text-[13px] leading-relaxed">
               {answer.risk.statement}
             </p>
@@ -87,7 +93,7 @@ export function AIResponse({ answer, onAction }: AIResponseProps) {
                 <span className="text-ink text-[13px] font-medium">{item.label}</span>
                 <span className="flex items-center gap-2.5">
                   <span className="text-muted text-[12.5px]">{item.value}</span>
-                  {item.severity ? <StatusBadge severity={item.severity} compact /> : null}
+                  {item.severity ? <RiskBadge severity={item.severity} size="sm" /> : null}
                 </span>
               </div>
             ))}
@@ -119,6 +125,8 @@ export function AIResponse({ answer, onAction }: AIResponseProps) {
           </div>
         </motion.section>
       </div>
+
+      {footer}
     </div>
   )
 }

@@ -1,8 +1,11 @@
 import {
+  AlertTriangle,
   ClockAlert,
   Copy,
+  FileBarChart,
   ScanSearch,
   ShieldAlert,
+  Terminal,
   Unlink,
   UserX,
   type LucideIcon,
@@ -10,73 +13,131 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router'
 
+import { AgentTrace } from '@/components/ui/AgentTrace'
 import {
   AIResponse,
   Card,
+  ExecutionTimeline,
   LoadingState,
   PageHeader,
   PromptInput,
+  RecommendationCard,
   SectionHeader,
+  SourceTag,
 } from '@/components/ui'
-import {
-  aiAnswers,
-  exampleQuestions,
-  fallbackAnswer,
-  suggestedActions,
-} from '@/data/mockData'
-import type { AIAnswer } from '@/types/domain'
+import { useAnalyze } from '@/hooks/queries'
+import type { ApiAgentResult } from '@/types/api'
+import type { AIAnswer, Recommendation } from '@/types/domain'
+import type { DataSource } from '@/services'
 
 const ACTION_ICONS: Record<string, LucideIcon> = {
-  'user-x': UserX,
-  'scan-search': ScanSearch,
-  'shield-alert': ShieldAlert,
-  unlink: Unlink,
-  'clock-alert': ClockAlert,
-  copy: Copy,
+  'missing-owners': UserX,
+  'broken-lineage': Unlink,
+  duplicates: Copy,
+  pii: ShieldAlert,
+  report: FileBarChart,
+  stale: ClockAlert,
 }
 
-/** How long the fake "thinking" phase lasts. Real agent latency replaces it. */
-const THINK_MS = 1400
+/** The suggested-action cards. Each maps to a real agent intent. */
+const SUGGESTED = [
+  {
+    id: 'missing-owners',
+    title: 'Missing Owners',
+    description: 'Assets with no accountable owner, ranked by blast radius.',
+    prompt: 'Find datasets without owners',
+  },
+  {
+    id: 'broken-lineage',
+    title: 'Broken Lineage',
+    description: 'Assets whose upstream sources have drifted or vanished.',
+    prompt: 'Show assets with broken or missing lineage',
+  },
+  {
+    id: 'duplicates',
+    title: 'Duplicate Assets',
+    description: 'Near-identical tables splitting the source of truth.',
+    prompt: 'Find duplicate or near-identical datasets',
+  },
+  {
+    id: 'pii',
+    title: 'PII Detection',
+    description: 'Probable personal data missing a classification tag.',
+    prompt: 'Find untagged PII across all datasets',
+  },
+  {
+    id: 'report',
+    title: 'Generate Report',
+    description: 'An executive governance summary of the whole catalogue.',
+    prompt: 'Create a governance report',
+  },
+  {
+    id: 'stale',
+    title: 'Stale Assets',
+    description: 'Datasets not refreshed within their expected cadence.',
+    prompt: 'Which assets are stale?',
+  },
+] as const
+
+const EXAMPLES = [
+  'Find datasets without owners',
+  'Which datasets are highest risk?',
+  'Explain downstream impact',
+  'Generate documentation',
+  'Analyze lineage',
+]
 
 interface Exchange {
   id: number
   answer: AIAnswer
+  raw: ApiAgentResult | null
+  source: DataSource
+  reason?: string
 }
 
 /**
- * The product's core surface: ask → agent investigates → structured answer.
+ * The AI Investigator — the product's hero surface.
  *
- * DEMO MODE: answers come from `mockData.aiAnswers`, matched by keyword.
- * The LangGraph agent endpoint (Phase 4) replaces `resolveAnswer` +
- * `THINK_MS` with a real API call; everything else stays.
+ * Every question is a real `POST /api/v1/agent/analyze` call. The agent plans
+ * which tools to run, gathers evidence, scores risk deterministically, and
+ * explains the result; this page renders that, including the execution trace
+ * so the multi-step work is visible rather than claimed.
  */
 export function InvestigatorPage() {
   const location = useLocation()
   const [exchanges, setExchanges] = useState<Exchange[]>([])
-  const [thinking, setThinking] = useState(false)
+  // Developer mode reveals the full node-by-node pipeline for each answer.
+  const [devMode, setDevMode] = useState(false)
   const nextId = useRef(1)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const firedForState = useRef<string | null>(null)
+  const firedFor = useRef<string | null>(null)
 
-  const ask = (prompt: string) => {
-    if (thinking) return
-    setThinking(true)
+  const analyze = useAnalyze()
 
-    window.setTimeout(() => {
-      const answer = resolveAnswer(prompt)
-      setExchanges((current) => [
-        ...current,
-        { id: nextId.current++, answer: { ...answer, question: prompt } },
-      ])
-      setThinking(false)
-    }, THINK_MS)
+  const ask = (question: string) => {
+    if (analyze.isPending) return
+
+    analyze.mutate(question, {
+      onSuccess: (result) => {
+        setExchanges((current) => [
+          ...current,
+          {
+            id: nextId.current++,
+            answer: result.data.answer,
+            raw: result.data.raw,
+            source: result.source,
+            reason: result.reason,
+          },
+        ])
+      },
+    })
   }
 
   // A prompt handed over from another page (Overview quick actions).
   useEffect(() => {
     const handed = (location.state as { prompt?: string } | null)?.prompt
-    if (handed && firedForState.current !== handed) {
-      firedForState.current = handed
+    if (handed && firedFor.current !== handed) {
+      firedFor.current = handed
       ask(handed)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -84,37 +145,60 @@ export function InvestigatorPage() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [exchanges.length, thinking])
+  }, [exchanges.length, analyze.isPending])
 
-  const hasConversation = exchanges.length > 0 || thinking
+  const started = exchanges.length > 0 || analyze.isPending
 
   return (
     <div className="mx-auto max-w-3xl">
-      {!hasConversation ? (
+      {!started ? (
         <div className="pt-8 pb-4 text-center sm:pt-16">
-          <PageHeaderHero />
+          <h1 className="text-ink text-2xl font-semibold tracking-tight sm:text-3xl">
+            Ask DataGuardian
+          </h1>
+          <p className="text-muted mx-auto mt-2 mb-8 max-w-md text-sm leading-relaxed">
+            Your autonomous metadata governance engineer. Every answer is
+            grounded in live DataHub metadata and a deterministic rule engine —
+            never a guess.
+          </p>
         </div>
       ) : (
         <PageHeader
           title="AI Investigator"
-          description="Every answer is grounded in catalogue metadata: reasoning, risk, evidence, recommendation."
+          description="The agent plans its own tools, gathers evidence, then explains what it found."
+          action={
+            <button
+              type="button"
+              onClick={() => setDevMode((on) => !on)}
+              aria-pressed={devMode}
+              title="Show the full execution pipeline for each answer"
+              className={
+                devMode
+                  ? 'border-brand/40 bg-brand/12 text-ink inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-medium'
+                  : 'border-line bg-surface text-muted hover:text-ink inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-colors'
+              }
+            >
+              <Terminal className="size-3.5" />
+              Developer mode
+            </button>
+          }
         />
       )}
 
       <PromptInput
-        size={hasConversation ? 'default' : 'hero'}
+        size={started ? 'default' : 'hero'}
+        placeholder="Ask DataGuardian about your metadata..."
         onSubmit={ask}
-        disabled={thinking}
-        examples={hasConversation ? [] : exampleQuestions}
+        disabled={analyze.isPending}
+        examples={started ? [] : EXAMPLES}
       />
 
-      {/* Suggested actions — landing state only. */}
-      {!hasConversation ? (
+      {!started ? (
         <div className="mt-10">
-          <SectionHeader title="Suggested Investigations" />
+          <SectionHeader title="Suggested AI Actions" />
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-            {suggestedActions.map((action) => {
-              const Icon = ACTION_ICONS[action.icon] ?? ScanSearch
+            {SUGGESTED.map((action) => {
+              const Icon = ACTION_ICONS[action.id] ?? ScanSearch
               return (
                 <Card
                   key={action.id}
@@ -138,56 +222,132 @@ export function InvestigatorPage() {
         </div>
       ) : null}
 
-      {/* Conversation. */}
       <div className="mt-6 space-y-5">
         {exchanges.map((exchange) => (
-          <AIResponse
-            key={exchange.id}
-            answer={exchange.answer}
-            onAction={(action) => ask(action)}
-          />
+          <div key={exchange.id}>
+            {/* Degradation and demo-data warnings sit ABOVE the answer, so
+                they cannot be missed after reading it. */}
+            {exchange.source === 'demo' ? (
+              <Banner
+                tone="warning"
+                text="Backend unreachable — showing an illustrative answer, not your catalogue."
+                detail={exchange.reason}
+              />
+            ) : exchange.raw?.degraded ? (
+              <Banner
+                tone="warning"
+                text="Partial evidence: some tools failed, so this answer is incomplete."
+                detail={exchange.raw.errors[0]}
+              />
+            ) : null}
+
+            <AIResponse
+              answer={exchange.answer}
+              onAction={ask}
+              footer={
+                exchange.raw ? (
+                  <AgentTrace
+                    trace={exchange.raw.trace}
+                    toolsUsed={exchange.raw.tools_used}
+                    durationMs={exchange.raw.duration_ms}
+                    provider={exchange.raw.llm_provider}
+                  />
+                ) : null
+              }
+            />
+
+            {/* Full pipeline, developer mode only. The collapsed AgentTrace
+                above is enough for most readers; this is the deep view. */}
+            {devMode && exchange.raw ? (
+              <Card className="mt-4 p-5">
+                <ExecutionTimeline
+                  trace={exchange.raw.trace}
+                  durationMs={exchange.raw.duration_ms}
+                  provider={exchange.raw.llm_provider}
+                />
+              </Card>
+            ) : null}
+
+            {exchange.raw && exchange.raw.recommendations.length > 0 ? (
+              <div className="mt-4">
+                <SectionHeader
+                  title="Recommendations"
+                  action={<SourceTag source={exchange.source} reason={exchange.reason} />}
+                />
+                <div className="space-y-2.5">
+                  {exchange.raw.recommendations.map((recommendation, index) => (
+                    <RecommendationCard
+                      key={`${recommendation.action}-${index}`}
+                      index={index}
+                      recommendation={toRecommendation(recommendation)}
+                      onRun={(r) => ask(r.action)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
         ))}
-        {thinking ? <LoadingState variant="thinking" /> : null}
+
+        {analyze.isPending ? (
+          <LoadingState
+            variant="thinking"
+            label="Planning tools, gathering evidence, scoring risk…"
+          />
+        ) : null}
+
+        {analyze.isError ? (
+          <Banner
+            tone="critical"
+            text="The investigation could not be completed."
+            detail={analyze.error.message}
+          />
+        ) : null}
+
         <div ref={bottomRef} />
       </div>
     </div>
   )
 }
 
-function PageHeaderHero() {
+function toRecommendation(raw: ApiAgentResult['recommendations'][number]): Recommendation {
+  return {
+    action: raw.action,
+    rationale: raw.rationale,
+    priority: raw.priority,
+    assetUrn: raw.asset_urn,
+  }
+}
+
+function Banner({
+  tone,
+  text,
+  detail,
+}: {
+  tone: 'warning' | 'critical'
+  text: string
+  detail?: string
+}) {
   return (
-    <>
-      <h1 className="text-ink text-2xl font-semibold tracking-tight sm:text-3xl">
-        Ask DataGuardian
-      </h1>
-      <p className="text-muted mx-auto mt-2 mb-8 max-w-md text-sm leading-relaxed">
-        Your autonomous metadata governance engineer. Investigations are
-        grounded in live DataHub metadata — never guesses.
-      </p>
-    </>
+    <div
+      role="status"
+      className={
+        tone === 'critical'
+          ? 'border-critical/25 bg-critical/10 mb-3 flex items-start gap-2.5 rounded-xl border p-3'
+          : 'border-warning/25 bg-warning/10 mb-3 flex items-start gap-2.5 rounded-xl border p-3'
+      }
+    >
+      <AlertTriangle
+        className={
+          tone === 'critical'
+            ? 'text-critical mt-0.5 size-4 shrink-0'
+            : 'text-warning mt-0.5 size-4 shrink-0'
+        }
+      />
+      <div>
+        <p className="text-ink-secondary text-[12.5px] font-medium">{text}</p>
+        {detail ? <p className="text-muted mt-0.5 text-[11.5px]">{detail}</p> : null}
+      </div>
+    </div>
   )
-}
-
-/**
- * Keyword-match a prompt to a canned demo answer.
- * Replaced wholesale by the agent API in Phase 4.
- */
-function resolveAnswer(prompt: string): AIAnswer {
-  const lowered = prompt.toLowerCase()
-
-  if (lowered.includes('owner')) return byId('missing-owners')
-  if (lowered.includes('risk')) return byId('highest-risk')
-  if (lowered.includes('impact') || lowered.includes('downstream'))
-    return byId('downstream-impact')
-  if (lowered.includes('document') || lowered.includes('docs'))
-    return byId('generate-docs')
-  if (lowered.includes('analyze') || lowered.includes('health'))
-    return byId('highest-risk')
-  if (lowered.includes('pii')) return byId('missing-owners')
-
-  return fallbackAnswer
-}
-
-function byId(id: string): AIAnswer {
-  return aiAnswers.find((answer) => answer.id === id) ?? fallbackAnswer
 }

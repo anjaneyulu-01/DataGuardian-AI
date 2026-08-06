@@ -36,6 +36,7 @@ async def health() -> HealthStatus:
         status="ok",
         version=settings.version,
         environment=settings.environment,
+        scheduler_enabled=settings.scheduler_enabled,
     )
 
 

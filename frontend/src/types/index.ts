@@ -1,1 +1,34 @@
-export type { ApiError, HealthStatus, ServiceInfo } from './api'
+export type {
+  ApiAgentResult,
+  ApiDataset,
+  ApiDatasetSummary,
+  ApiError,
+  ApiFinding,
+  ApiImpact,
+  ApiLineage,
+  ApiOwner,
+  ApiPage,
+  ApiRecommendation,
+  ApiSeverity,
+  ApiTraceEntry,
+  DataHubHealth,
+  HealthStatus,
+  LLMHealth,
+} from './api'
+
+export type {
+  ActivityEvent,
+  AIAnswer,
+  DocTemplate,
+  EvidenceItem,
+  Finding,
+  GovernanceAsset,
+  HealthSummary,
+  LineageGraphEdge,
+  LineageGraphNode,
+  LineageNodeData,
+  Recommendation,
+  RiskTrendPoint,
+  Severity,
+  SuggestedAction,
+} from './domain'

@@ -14,10 +14,12 @@ from typing import Annotated
 
 from fastapi import Depends, Query, Request
 
+from app.agents import GovernanceAgent
 from app.config import Settings, get_settings
 from app.integrations.datahub import DataHubClient, DataHubService, GraphQLClient
 from app.integrations.datahub.cache import NullCache, TTLCache
 from app.llm import BaseLLM, LLMFactory
+from app.tools import DataHubToolkit, build_tools
 
 # Keys under which the lifespan stores shared, process-wide objects on
 # `app.state`. All must outlive a single request: the clients for their
@@ -88,6 +90,32 @@ def get_llm(request: Request) -> BaseLLM:
     return LLMFactory.create(get_settings())
 
 
+def get_toolkit(
+    service: Annotated[DataHubService, Depends(get_datahub_service)],
+) -> DataHubToolkit:
+    """Build the agent-facing toolkit over the shared service.
+
+    All tools share one service, so they share its cache and connection pool:
+    an agent run making five tool calls does not open five conversations with
+    DataHub.
+    """
+    return build_tools(service)
+
+
+def get_governance_agent(
+    toolkit: Annotated[DataHubToolkit, Depends(get_toolkit)],
+    llm: Annotated[BaseLLM, Depends(get_llm)],
+) -> GovernanceAgent:
+    """Assemble the governance agent for this request.
+
+    The agent compiles its graph on construction — cheap (topology validation,
+    no I/O) but not free, so if agent traffic grows this is the thing to hoist
+    into the lifespan alongside the client and cache. Per-request today keeps
+    the dependency graph explicit and the toolkit request-scoped.
+    """
+    return GovernanceAgent(toolkit=toolkit, llm=llm)
+
+
 # --- Reusable annotated dependencies ---------------------------------------
 # Routers import these instead of repeating `Depends(...)`.
 
@@ -96,6 +124,8 @@ DataHubClientDep = Annotated[DataHubClient, Depends(get_datahub_client)]
 DataHubCacheDep = Annotated[TTLCache, Depends(get_datahub_cache)]
 DataHubServiceDep = Annotated[DataHubService, Depends(get_datahub_service)]
 LLMDep = Annotated[BaseLLM, Depends(get_llm)]
+DataHubToolkitDep = Annotated[DataHubToolkit, Depends(get_toolkit)]
+GovernanceAgentDep = Annotated[GovernanceAgent, Depends(get_governance_agent)]
 
 
 # --- Common query parameters ------------------------------------------------

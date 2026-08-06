@@ -1,29 +1,20 @@
 import { apiClient } from './apiClient'
-import type { HealthStatus } from '@/types'
+import type { DataHubHealth, HealthStatus, LLMHealth } from '@/types/api'
 
-/** Shape of `GET /api/v1/health/datahub` (see backend DataHubHealthReport). */
-export interface DataHubStatus {
-  reachable: boolean
-  gms_url: string
-  authenticated: boolean
-  version: string | null
-  latency_ms: number | null
-  error: string | null
-  cache?: {
-    hits: number
-    misses: number
-    entries: number
-    evictions: number
-    hit_rate: number
-  } | null
-}
+/** Re-exported under the old name so existing imports keep working. */
+export type DataHubStatus = DataHubHealth
 
 export async function fetchApiHealth(): Promise<HealthStatus> {
   const { data } = await apiClient.get<HealthStatus>('/v1/health')
   return data
 }
 
-export async function fetchDataHubStatus(): Promise<DataHubStatus> {
-  const { data } = await apiClient.get<DataHubStatus>('/v1/health/datahub')
+export async function fetchDataHubStatus(): Promise<DataHubHealth> {
+  const { data } = await apiClient.get<DataHubHealth>('/v1/health/datahub')
+  return data
+}
+
+export async function fetchLLMStatus(): Promise<LLMHealth> {
+  const { data } = await apiClient.get<LLMHealth>('/v1/health/llm')
   return data
 }

@@ -18,6 +18,11 @@ class HealthStatus(BaseModel):
     status: Literal["ok", "degraded", "down"] = "ok"
     version: str
     environment: str
+    # Whether background scanning is running. Reported here rather than on a
+    # new endpoint: it is process state this liveness payload already
+    # describes, and the UI needs it for the scheduler status indicator.
+    # Additive and optional, so existing consumers are unaffected.
+    scheduler_enabled: bool = False
 
 
 class ErrorResponse(BaseModel):

@@ -7,7 +7,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-import { StatusBadge } from './StatusBadge'
+import { RiskBadge } from './RiskBadge'
 import type { ActivityEvent } from '@/types/domain'
 import { cn } from '@/utils'
 import { timeAgo } from '@/utils/format'
@@ -62,7 +62,7 @@ export function ActivityFeed({ events }: ActivityFeedProps) {
             <div className="min-w-0 pt-0.5">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-ink text-[13px] font-medium">{event.title}</p>
-                {event.severity ? <StatusBadge severity={event.severity} /> : null}
+                {event.severity ? <RiskBadge severity={event.severity} /> : null}
               </div>
               <p className="text-muted mt-0.5 text-[12.5px]">{event.detail}</p>
               <p className="text-faint mt-1 text-[11px]">{timeAgo(event.timestamp)}</p>

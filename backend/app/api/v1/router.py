@@ -7,12 +7,21 @@ literal route is never shadowed by a catch-all.
 
 from fastapi import APIRouter
 
-from app.api.v1 import datasets, domains, health, lineage, owners, statistics
+from app.api.v1 import (
+    agent,
+    datasets,
+    domains,
+    health,
+    lineage,
+    owners,
+    statistics,
+)
 
 api_router = APIRouter()
 
 # Fixed-path routers.
 api_router.include_router(health.router)
+api_router.include_router(agent.router)
 api_router.include_router(owners.router)
 api_router.include_router(lineage.router)
 api_router.include_router(statistics.router)

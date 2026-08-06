@@ -1,8 +1,20 @@
 # LLM Layer
 
-Model-agnostic reasoning for DataGuardian AI. Grok (xAI) is the default
-provider; Gemini, OpenAI, and Claude are registered placeholders that become
-real by adding one file each.
+Model-agnostic reasoning for DataGuardian AI. Two providers are implemented —
+**Groq** (default) and **Grok** (xAI) — and Gemini, OpenAI, and Claude are
+registered placeholders that become real by adding one file each.
+
+> **Groq ≠ Grok.** Two unrelated companies with nearly identical names, and a
+> genuine source of confusion:
+>
+> | | Company | Endpoint | Key prefix |
+> | --- | --- | --- | --- |
+> | **Groq** | Groq Inc — inference host for open-weight models (Llama, Mixtral) | `api.groq.com` | `gsk_` |
+> | **Grok** | xAI — Elon Musk's AI lab, their own model | `api.x.ai` | `xai-` |
+>
+> The keys are not interchangeable. `LLM_PROVIDER=groq` and `LLM_PROVIDER=grok`
+> select different vendors, and `test_grok_and_groq_are_not_the_same_provider`
+> guards the registry against a one-letter typo.
 
 ---
 
@@ -34,7 +46,9 @@ real by adding one file each.
    │  factory.py — LLM_PROVIDER selects the implementation   │
    └───────────────────────────┬───────────────────────────┘
                                ▼
-        providers/grok.py  →  https://api.x.ai/v1
+        providers/openai_compatible.py   shared transport
+             ├── providers/groq.py  →  https://api.groq.com/openai/v1
+             └── providers/grok.py  →  https://api.x.ai/v1
         providers/gemini.py, openai.py, claude.py  (planned)
 ```
 
@@ -44,7 +58,9 @@ Files:
 | --- | --- |
 | `base.py` | The contract. Providers implement `chat` + `health`; everything else is built here so it never diverges between vendors. |
 | `factory.py` | `LLM_PROVIDER` → provider instance. The only place that knows concrete classes. |
-| `providers/grok.py` | xAI transport: auth, timeouts, retries, response mapping. |
+| `providers/openai_compatible.py` | Shared transport for every vendor speaking OpenAI's chat-completions protocol: auth, retries, error translation, response mapping. |
+| `providers/groq.py` | Groq configuration only (~20 lines). |
+| `providers/grok.py` | xAI configuration only (~20 lines). |
 | `prompts/` | Every prompt in the product, as `PromptTemplate` objects. |
 | `models.py` | `LLMResponse`, `RiskExplanation`, `Recommendation`, `StructuredReport`, `LLMHealth`. |
 | `retry.py` | What is transient; jittered exponential backoff. |
@@ -56,7 +72,39 @@ Files:
 
 Three steps. None of them touch business logic.
 
-**1. Implement two methods.**
+### Case A — the vendor is OpenAI-compatible (most are)
+
+Subclass `OpenAICompatibleProvider` and supply configuration. No transport
+code at all — this is the entire file:
+
+```python
+# app/llm/providers/together.py
+class TogetherProvider(OpenAICompatibleProvider):
+    name = "together"
+
+    def __init__(self, settings=None, transport=None) -> None:
+        resolved = settings or default_settings
+        super().__init__(
+            config=ProviderConfig(
+                vendor="Together",
+                key_env_var="TOGETHER_API_KEY",
+                console_url="https://api.together.ai/settings/api-keys",
+                api_key=resolved.together_api_key,
+                base_url=resolved.together_base_url,
+                model=resolved.together_model,
+            ),
+            settings=resolved,
+            transport=transport,
+        )
+```
+
+`providers/groq.py` and `providers/grok.py` are exactly this — the reason
+adding Groq took one small file rather than a copy of the transport layer.
+
+### Case B — the vendor has its own protocol
+
+Gemini (`generateContent`) and Anthropic (`/v1/messages`) do not speak the
+OpenAI wire format. These implement `BaseLLM` directly:
 
 ```python
 # app/llm/providers/gemini.py
@@ -70,8 +118,9 @@ class GeminiProvider(BaseLLM):
     async def health(self) -> LLMHealth: ...
 ```
 
-`generate`, `summarize`, and `structured_output` come free from `BaseLLM` —
-including JSON extraction, schema validation, and the repair round-trip.
+Either way, `generate`, `summarize`, and `structured_output` come free from
+`BaseLLM` — including JSON extraction, schema validation, and the repair
+round-trip.
 
 **2. Register it** in `factory.py`:
 
@@ -79,10 +128,10 @@ including JSON extraction, schema validation, and the repair round-trip.
 _REGISTRY["gemini"] = lambda settings: GeminiProvider(settings=settings)
 ```
 
-**3. Add credentials** to `Settings` and `.env.example`.
+**3. Add credentials** to `Settings` and the root `.env.example`.
 
 Then `LLM_PROVIDER=gemini` switches the whole application. No caller changes,
-because no caller ever imported `GrokProvider`.
+because no caller ever imported a concrete provider class.
 
 **Contract for implementers:** translate transport failures into the typed
 exceptions in `exceptions.py` (that is how retry classification works),
@@ -191,10 +240,16 @@ explanations, not its detection.
 
 ## 6. Configuration
 
+All of these live in the **single `.env` at the repository root** — shared
+with the backend, the frontend, and docker-compose.
+
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `LLM_PROVIDER` | `grok` | Implemented: `grok`. Placeholders: `gemini`, `openai`, `claude`. |
-| `XAI_API_KEY` | — | From <https://console.x.ai>. Absent = app boots, LLM calls fail with a clear error. |
+| `LLM_PROVIDER` | `groq` | Implemented: `groq`, `grok`. Placeholders: `gemini`, `openai`, `claude`. |
+| `GROQ_API_KEY` | — | From <https://console.groq.com/keys>. Keys start `gsk_`. |
+| `GROQ_MODEL` | `llama-3.3-70b-versatile` | Supports the JSON response format `structured_output()` needs. |
+| `GROQ_BASE_URL` | `https://api.groq.com/openai/v1` | Also accepted as `GROQ_API_BASE`. |
+| `XAI_API_KEY` | — | From <https://console.x.ai>. Keys start `xai-`. Only needed when `LLM_PROVIDER=grok`. |
 | `XAI_MODEL` | `grok-4-fast-reasoning` | |
 | `XAI_BASE_URL` | `https://api.x.ai/v1` | |
 | `LLM_TIMEOUT` | `60` | Generous: reasoning models are slow. |
@@ -229,11 +284,18 @@ downstream consumers with bad data.
 
 ## 8. Notes on implementation choices
 
-**Why httpx, not the xAI SDK.** xAI documents the OpenAI-compatible endpoint
-as a first-class interface. httpx is already a project dependency with an
-established `MockTransport` testing pattern, so the whole provider is
-testable without network or credentials. The SDK can slot in behind
-`GrokProvider` later without touching a single caller.
+**Why httpx, not a vendor SDK.** Both xAI and Groq document the
+OpenAI-compatible endpoint as a first-class interface. httpx is already a
+project dependency with an established `MockTransport` testing pattern, so
+the whole provider is testable without network or credentials. A vendor SDK
+can slot in behind the same class later without touching a single caller.
+
+**Why one shared transport instead of a file per vendor.** The first version
+had all of xAI's transport inline in `grok.py`. Adding Groq would have meant
+copying ~200 lines to change three values, so the shared behaviour moved to
+`openai_compatible.py` and both vendors became configuration. Every future
+OpenAI-compatible provider now costs ~20 lines, and a bug fix in retry
+classification or response mapping fixes all of them at once.
 
 **Streaming.** Not implemented — nothing consumes it yet, and shipping an
 unused streaming path would be untested surface area. The design is ready:

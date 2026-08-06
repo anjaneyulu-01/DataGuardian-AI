@@ -431,7 +431,9 @@ def map_dataset(raw: Any) -> Dataset | None:
         institutional_memory=map_institutional_memory(
             dataset.get("institutionalMemory")
         ),
-        created=_timestamp(_dig(properties, "created", "time")),
+        # `created` is a bare epoch-millis Long, unlike `lastModified` which
+        # is an AuditStamp wrapper. See the note in queries.GET_DATASET.
+        created=_timestamp(properties.get("created")),
     )
 
 

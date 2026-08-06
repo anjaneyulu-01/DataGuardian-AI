@@ -1,6 +1,7 @@
 import {
   BookText,
   Bot,
+  Boxes,
   Home,
   Network,
   Settings,
@@ -30,7 +31,10 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/risk', label: 'Risk Center', icon: TriangleAlert },
 ]
 
-const FOOTER_ITEMS: NavItem[] = [{ to: '/settings', label: 'Settings', icon: Settings }]
+const FOOTER_ITEMS: NavItem[] = [
+  { to: '/architecture', label: 'Architecture', icon: Boxes },
+  { to: '/settings', label: 'Settings', icon: Settings },
+]
 
 /** Primary navigation rail. Collapses to icons below the lg breakpoint. */
 export function Sidebar() {

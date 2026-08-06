@@ -64,6 +64,9 @@ class LLMHealth(_Base):
     model: str
     latency_ms: float | None = None
     error: str | None = None
+    # Providers that would be tried if this one fails transiently, in order.
+    # Empty when fail-over is disabled or nothing else is configured.
+    fallback_chain: list[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

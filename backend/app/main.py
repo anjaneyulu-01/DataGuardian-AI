@@ -79,17 +79,26 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         llm = LLMFactory.create(settings)
         setattr(app.state, LLM_PROVIDER_STATE_KEY, llm)
+
+        # Report what the factory ACTUALLY built. Reading `settings.xai_*`
+        # here was wrong: with LLM_PROVIDER=auto the selected provider may be
+        # any of five, so the log claimed an xAI model and "configured=False"
+        # while a perfectly healthy Groq provider was serving requests.
+        available = LLMFactory.available_providers(settings)
         logger.info(
-            "LLM ready (provider=%s, model=%s, configured=%s)",
+            "LLM ready (provider=%s, model=%s, configured=%s%s)",
             llm.name,
-            settings.xai_model,
-            bool(settings.xai_api_key),
+            getattr(llm, "model", "unknown"),
+            bool(available),
+            f", chain={getattr(llm, 'chain', [])}" if len(available) > 1 else "",
         )
-        if not settings.xai_api_key:
+        if not available:
+            hint = ", ".join(f"{name.upper()}_API_KEY" for name in ("groq", "gemini"))
             logger.warning(
-                "XAI_API_KEY is not set. The API starts normally, but any "
-                "LLM-backed endpoint will return a configuration error until "
-                "a key is added to backend/.env."
+                "No LLM provider has an API key. The API starts normally, but "
+                "any LLM-backed endpoint will return a configuration error "
+                "until one of %s is set in the .env at the repository root.",
+                hint,
             )
     except LLMError as exc:
         # A misconfigured LLM_PROVIDER must not take the whole API down —

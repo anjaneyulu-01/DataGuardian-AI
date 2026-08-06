@@ -16,10 +16,17 @@ Written against the DataHub GraphQL schema as documented for the 0.13.x /
 for a field the running instance does not expose fails the *whole* query with
 a GraphQL error rather than returning a partial result.
 
-TODO(datahub): Validate every document below against the local DataHub
-instance once it is running. The fastest check is to paste each query into
-GraphiQL at http://localhost:9002/api/graphiql and confirm it resolves. Each
-query carries its own TODO noting the fields most at risk.
+VALIDATION STATUS: all 12 documents below were executed against a live
+DataHub **v1.5.0.6** instance and pass. Re-verify after a DataHub upgrade with:
+
+    python scripts/validate_datahub.py --graphql-only
+
+That harness runs every document and reports per-query success and latency. It
+caught the one genuine incompatibility found so far: `DatasetProperties.created`
+is a `Long`, not an `AuditStamp`, so `created { time }` failed the whole query.
+
+Notes below each query record version sensitivities that are still worth
+knowing on a different DataHub release.
 """
 
 # ---------------------------------------------------------------------------
@@ -29,7 +36,7 @@ query carries its own TODO noting the fields most at risk.
 # `Owner.owner` is a union of CorpUser and CorpGroup, so both branches are
 # selected and `__typename` tells the mapper which one came back.
 #
-# TODO(datahub): `Owner.type` is the legacy ownership enum (DATAOWNER,
+# COMPAT: `Owner.type` is the legacy ownership enum (DATAOWNER,
 # PRODUCER, …) and `Owner.ownershipType` is the newer custom-ownership entity.
 # Both are selected for compatibility; drop `type` once the local instance is
 # confirmed to populate `ownershipType`.
@@ -138,7 +145,7 @@ def _document(body: str, *fragments: str) -> str:
 # Datasets
 # ---------------------------------------------------------------------------
 
-# TODO(datahub): `searchAcrossEntities` is the modern entry point. Very old
+# COMPAT: `searchAcrossEntities` is the modern entry point. Very old
 # instances only expose `search(input: SearchInput!)` — swap if GraphiQL
 # rejects this.
 LIST_DATASETS = _document(
@@ -162,7 +169,7 @@ query listDatasets($query: String!, $start: Int!, $count: Int!) {
     FRAGMENT_TAG,
 )
 
-# TODO(datahub): `institutionalMemory` and `editableSchemaMetadata` are present
+# COMPAT: `institutionalMemory` and `editableSchemaMetadata` are present
 # in 0.13+ but are the first things to disappear on trimmed-down builds.
 GET_DATASET = _document(
     """
@@ -171,7 +178,12 @@ query getDataset($urn: String!) {
     ...datasetSummaryFields
     properties {
       customProperties { key value }
-      created { time }
+      # `created` is a Long (epoch millis), NOT an AuditStamp — unlike
+      # `lastModified` in the summary fragment, which IS an AuditStamp and so
+      # takes `{ time }`. Verified against v1.5.0.6 by introspection; asking
+      # for `created { time }` fails the whole query with
+      # "Subselection not allowed on leaf type 'Long'".
+      created
     }
     glossaryTerms {
       terms { term { urn name properties { name description } } }
@@ -243,7 +255,7 @@ query getDatasetOwners($urn: String!) {
 # Distinct owners across the catalogue, via search facet aggregation. Far
 # cheaper than paging every dataset and de-duplicating client-side.
 #
-# TODO(datahub): `aggregateAcrossEntities` requires roughly DataHub 0.10+. If
+# COMPAT: `aggregateAcrossEntities` requires roughly DataHub 0.10+. If
 # the local instance rejects it, fall back to reading the `owners` facet from
 # a `searchAcrossEntities` response, which exposes the same aggregation.
 AGGREGATE_OWNERS = _document(
@@ -282,7 +294,7 @@ query aggregateOwners($query: String!) {
 # Domains
 # ---------------------------------------------------------------------------
 
-# TODO(datahub): `ListDomainsInput` gained a `query` field in later releases;
+# COMPAT: `ListDomainsInput` gained a `query` field in later releases;
 # it is omitted here so the document works on older instances too. The nested
 # `entities(input: {start: 0, count: 0})` asks for the total only — confirm the
 # local instance accepts count: 0, and use count: 1 if it validates against it.
@@ -356,7 +368,7 @@ query listTags($query: String!, $start: Int!, $count: Int!) {
 # `degree` is hop distance from the requested URN: 1 = direct neighbour. The
 # agent uses it to judge blast radius.
 #
-# TODO(datahub): `searchAcrossLineage` supports a `degree` filter for
+# COMPAT: `searchAcrossLineage` supports a `degree` filter for
 # multi-hop traversal on newer instances. Confirm the default depth on the
 # local instance before relying on hop counts beyond 1.
 GET_LINEAGE = _document(
@@ -397,7 +409,7 @@ query getLineage(
 # different ingestion sources and are independently optional: asking for both
 # in one query means a missing usage source also costs us the profile data.
 #
-# TODO(datahub): `datasetProfiles` is populated only when profiling is enabled
+# COMPAT: `datasetProfiles` is populated only when profiling is enabled
 # on the ingestion recipe. Expect an empty list on a fresh quickstart.
 GET_DATASET_PROFILES = _document(
     """
@@ -427,7 +439,7 @@ query getDatasetProfiles($urn: String!, $limit: Int!) {
 """
 )
 
-# TODO(datahub): `usageStats` requires a usage-ingestion source. It is absent
+# COMPAT: `usageStats` requires a usage-ingestion source. It is absent
 # on most quickstart instances, which is why the service treats a failure here
 # as non-fatal and returns profiles without usage.
 GET_DATASET_USAGE = _document(

@@ -1,9 +1,23 @@
-import { Bell, Moon, Sun } from 'lucide-react'
+import { Bell, ChevronDown, FlaskConical, Moon, Sun } from 'lucide-react'
+import { useState } from 'react'
 import { useLocation } from 'react-router'
 
-import { useSystemStatus, type LinkState } from '@/hooks/useSystemStatus'
+import {
+  NotificationsPanel,
+  StatusIndicator,
+  type ConnectionState,
+} from '@/components/ui'
+import { useDemoMode } from '@/app/demoMode'
+import {
+  useActivity,
+  useApiHealth,
+  useDataHubHealth,
+  useLLMHealth,
+  useViolations,
+} from '@/hooks/queries'
 import { useTheme } from '@/hooks/useTheme'
 import { cn } from '@/utils'
+import { notificationCount } from '@/utils/notifications'
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'Overview',
@@ -12,41 +26,165 @@ const PAGE_TITLES: Record<string, string> = {
   '/lineage': 'Lineage Explorer',
   '/documentation': 'Documentation',
   '/risk': 'Risk Center',
+  '/architecture': 'Architecture',
   '/settings': 'Settings',
 }
 
 /**
- * Glass topbar: current page, live API + DataHub status (real, polled from
- * the backend — the only non-mock data in the shell), notifications, theme
- * toggle, avatar.
+ * Glass top bar: workspace, five live status indicators, Demo Mode, alerts,
+ * theme, profile.
+ *
+ * The indicators are real, polled from the backend, and are the fastest way
+ * to tell whether an empty panel means "no findings" or "nothing connected".
  */
 export function TopBar() {
   const { pathname } = useLocation()
-  const status = useSystemStatus()
   const { theme, toggle } = useTheme()
+  const demo = useDemoMode()
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+
+  const api = useApiHealth()
+  const datahub = useDataHubHealth()
+  const llm = useLLMHealth()
+  const activity = useActivity()
+  const violations = useViolations()
+
+  const alertCount = notificationCount(violations.data?.data ?? [])
+  const cache = datahub.data?.cache
 
   return (
     <header className="glass sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-4 px-4 lg:px-6">
-      <div className="flex min-w-0 items-baseline gap-2.5">
+      <div className="flex min-w-0 items-center gap-2.5">
         <h1 className="text-ink truncate text-[14px] font-semibold tracking-tight">
           {PAGE_TITLES[pathname] ?? 'DataGuardian AI'}
         </h1>
+        <span className="text-faint hidden text-[12px] sm:inline">/</span>
+        <button
+          type="button"
+          className="text-muted hover:text-ink hidden items-center gap-1 text-[12px] transition-colors sm:inline-flex"
+          title="Workspace"
+        >
+          Production
+          <ChevronDown className="size-3" />
+        </button>
       </div>
 
       <div className="flex items-center gap-2">
-        <StatusPill label="API" state={status.api} />
-        <StatusPill
+        {/* Five dependency indicators. Progressively hidden on narrow screens,
+            most important last to disappear. */}
+        <StatusIndicator
+          label="Backend"
+          state={api.isPending ? 'checking' : api.isError ? 'offline' : 'online'}
+          detail={api.data ? `v${api.data.version} · ${api.data.environment}` : undefined}
+          className="hidden sm:inline-flex"
+        />
+        <StatusIndicator
           label="DataHub"
-          state={status.datahub}
-          title={status.datahubVersion ?? undefined}
+          state={
+            datahub.isPending
+              ? 'checking'
+              : datahub.data?.reachable
+                ? 'online'
+                : 'offline'
+          }
+          detail={
+            datahub.data?.reachable
+              ? `GMS ${datahub.data.version ?? 'unknown'}`
+              : (datahub.data?.error ?? 'Unreachable')
+          }
+          className="hidden sm:inline-flex"
+        />
+        <StatusIndicator
+          label="LLM"
+          state={
+            llm.isPending
+              ? 'checking'
+              : llm.isError
+                ? 'offline'
+                : !llm.data?.configured
+                  ? 'unconfigured'
+                  : llm.data.reachable
+                    ? 'online'
+                    : 'offline'
+          }
+          detail={llm.data ? `${llm.data.provider} · ${llm.data.model}` : undefined}
+          className="hidden lg:inline-flex"
+        />
+        <StatusIndicator
+          label="Cache"
+          // The cache is a property of a reachable backend, so it inherits
+          // DataHub's connectivity rather than having its own probe.
+          state={cache ? 'online' : datahub.isPending ? 'checking' : 'unconfigured'}
+          detail={
+            cache
+              ? `${cache.entries} entries · ${Math.round(cache.hit_rate * 100)}% hit rate`
+              : 'No cache statistics yet'
+          }
+          className="hidden xl:inline-flex"
+        />
+        <StatusIndicator
+          label="Scheduler"
+          state={
+            api.isPending
+              ? 'checking'
+              : api.data?.scheduler_enabled
+                ? 'online'
+                : 'unconfigured'
+          }
+          detail={
+            api.data?.scheduler_enabled
+              ? 'Background scans running'
+              : 'Disabled (SCHEDULER_ENABLED=false)'
+          }
+          className="hidden xl:inline-flex"
         />
 
         <span className="bg-line mx-1 hidden h-5 w-px sm:block" />
 
-        <IconButton label="Notifications">
-          <Bell className="size-4" />
-          <span className="bg-brand absolute top-1.5 right-1.5 size-1.5 rounded-full" />
-        </IconButton>
+        {/* Demo Mode. Deliberately prominent — a viewer must always be able to
+            tell whether they are looking at real metadata. */}
+        <button
+          type="button"
+          onClick={demo.toggle}
+          aria-pressed={demo.enabled}
+          title={
+            demo.enabled
+              ? 'Demo Mode is on — showing the sample enterprise catalogue'
+              : 'Switch to the sample enterprise catalogue'
+          }
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors',
+            demo.enabled
+              ? 'border-warning/40 bg-warning/15 text-warning'
+              : 'border-line bg-surface/70 text-muted hover:text-ink',
+          )}
+        >
+          <FlaskConical className="size-3" />
+          <span className="hidden sm:inline">Demo</span>
+        </button>
+
+        <div className="relative">
+          <IconButton
+            label="Notifications"
+            onClick={() => setNotificationsOpen((open) => !open)}
+          >
+            <Bell className="size-4" />
+            {alertCount > 0 ? (
+              <span className="bg-critical absolute top-0.5 right-0.5 grid min-w-4 place-items-center rounded-full px-1 text-[9px] font-bold text-white">
+                {alertCount > 9 ? '9+' : alertCount}
+              </span>
+            ) : null}
+          </IconButton>
+
+          <NotificationsPanel
+            open={notificationsOpen}
+            onClose={() => setNotificationsOpen(false)}
+            activity={activity.data?.data ?? []}
+            findings={violations.data?.data ?? []}
+            source={violations.data?.source ?? 'demo'}
+            reason={violations.data?.reason}
+          />
+        </div>
 
         <IconButton label="Toggle theme" onClick={toggle}>
           {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
@@ -61,33 +199,6 @@ export function TopBar() {
         </button>
       </div>
     </header>
-  )
-}
-
-function StatusPill({
-  label,
-  state,
-  title,
-}: {
-  label: string
-  state: LinkState
-  title?: string
-}) {
-  return (
-    <span
-      title={title}
-      className="border-line bg-surface/70 hidden items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium sm:inline-flex"
-    >
-      <span
-        className={cn(
-          'size-1.5 rounded-full',
-          state === 'online' && 'bg-positive',
-          state === 'offline' && 'bg-critical',
-          state === 'checking' && 'bg-warning animate-pulse',
-        )}
-      />
-      <span className="text-muted">{label}</span>
-    </span>
   )
 }
 
@@ -111,3 +222,5 @@ function IconButton({
     </button>
   )
 }
+
+export type { ConnectionState }

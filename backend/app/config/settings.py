@@ -6,17 +6,30 @@ once, at import time, and validated by Pydantic. Modules should import the
 """
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# The repository root, resolved from this file rather than the working
+# directory: backend/app/config/settings.py -> config -> app -> backend -> root.
+# Without this, `uvicorn app.main:app` from backend/ and `pytest` from the repo
+# root would read different files.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+
+# The project keeps ONE .env at the repository root, shared by the backend,
+# the frontend (via Vite's envDir), and docker-compose. A backend/.env is still
+# honoured if present and wins, since later files override earlier ones — but
+# it is not required and not created by default.
+_ENV_FILES = (_REPO_ROOT / ".env", _REPO_ROOT / "backend" / ".env")
 
 
 class Settings(BaseSettings):
     """Runtime configuration for the DataGuardian AI backend."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_ENV_FILES,
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -82,11 +95,32 @@ class Settings(BaseSettings):
     datahub_verify_ssl: bool = True
 
     # --- LLM -------------------------------------------------------------------
-    # Which provider `LLMFactory` builds. Only "grok" is implemented; "gemini",
-    # "openai", and "claude" are registered placeholders so switching later is
-    # a config change, not a code change.
-    llm_provider: Literal["grok", "gemini", "openai", "claude"] = "grok"
+    # Which provider `LLMFactory` builds.
+    #   "auto"  — pick the first provider in `llm_provider_order` that has a
+    #             key configured. Nothing to change when you swap keys.
+    #   <name>  — pin to that provider and fail loudly if it has no key.
+    llm_provider: Literal["auto", "grok", "groq", "gemini", "openai", "claude"] = "auto"
+
+    # Preference order for "auto", and the fail-over order when
+    # `llm_fallback_enabled`. Earlier entries win.
+    llm_provider_order: list[str] = Field(
+        default=["groq", "gemini", "grok", "openai", "claude"]
+    )
+
+    # On a *transient* failure (rate limit, timeout, provider down) try the
+    # next configured provider instead of failing the request. Deterministic
+    # failures — bad key, bad model name — never fail over, because the next
+    # provider would fail identically and the real error would be hidden.
+    llm_fallback_enabled: bool = True
+
+    # Overrides the active provider's model. Lets you change model without
+    # touching provider-specific variables: LLM_MODEL=llama-3.1-8b-instant.
+    llm_model: str | None = None
+
     llm_timeout: float = 60.0
+    # Generous because reasoning models (Gemini 2.5, Grok 4) spend part of the
+    # budget on internal thinking and return an EMPTY completion if the limit
+    # is hit before any visible text is produced.
     llm_max_tokens: int = 4096
     # Low temperature by design: governance explanations must be grounded in
     # the supplied evidence, not creative.
@@ -95,13 +129,65 @@ class Settings(BaseSettings):
     llm_max_retries: int = 2
 
     # --- xAI / Grok ------------------------------------------------------------
+    # NOTE: xAI ("Grok") and Groq below are unrelated companies with similar
+    # names. Grok is the model; Groq is an inference host. Keys are not
+    # interchangeable: xAI keys start `xai-`, Groq keys start `gsk_`.
     xai_api_key: str | None = None
     xai_model: str = "grok-4-fast-reasoning"
     xai_base_url: str = "https://api.x.ai/v1"
 
-    # --- Gemini (placeholder provider — not implemented yet) --------------------
+    # --- Groq --------------------------------------------------------------------
+    groq_api_key: str | None = None
+    groq_model: str = "llama-3.3-70b-versatile"
+    # Accepts GROQ_BASE_URL or GROQ_API_BASE. Both spellings are in common use
+    # in Groq's own docs and examples, and silently ignoring the other one
+    # sends requests to the default endpoint while the user believes they
+    # overrode it — a genuinely confusing failure.
+    groq_base_url: str = Field(
+        default="https://api.groq.com/openai/v1",
+        validation_alias=AliasChoices(
+            "GROQ_BASE_URL", "GROQ_API_BASE", "groq_base_url", "groq_api_base"
+        ),
+    )
+
+    # --- Gemini ------------------------------------------------------------------
+    # Google exposes an OpenAI-compatible surface at /v1beta/openai, so Gemini
+    # reuses the shared transport rather than needing a bespoke provider.
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-2.0-flash"
+    # 2.5-flash rather than 2.0-flash: they draw on separate quota pools and
+    # 2.5 is the current generation.
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_base_url: str = Field(
+        default="https://generativelanguage.googleapis.com/v1beta/openai",
+        validation_alias=AliasChoices(
+            "GEMINI_BASE_URL", "GEMINI_API_BASE", "gemini_base_url", "gemini_api_base"
+        ),
+    )
+
+    # --- OpenAI --------------------------------------------------------------------
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-4o-mini"
+    openai_base_url: str = Field(
+        default="https://api.openai.com/v1",
+        validation_alias=AliasChoices(
+            "OPENAI_BASE_URL", "OPENAI_API_BASE", "openai_base_url", "openai_api_base"
+        ),
+    )
+
+    # --- Anthropic / Claude ----------------------------------------------------------
+    # Anthropic publishes an OpenAI-compatible compatibility layer, so Claude
+    # also reuses the shared transport.
+    anthropic_api_key: str | None = None
+    anthropic_model: str = "claude-sonnet-5"
+    anthropic_base_url: str = Field(
+        default="https://api.anthropic.com/v1",
+        validation_alias=AliasChoices(
+            "ANTHROPIC_BASE_URL",
+            "ANTHROPIC_API_BASE",
+            "anthropic_base_url",
+            "anthropic_api_base",
+        ),
+    )
 
     @property
     def is_production(self) -> bool:

@@ -53,7 +53,7 @@ hangs on:
 
 ## 2. Authentication
 
-- `DATAHUB_TOKEN` in `backend/.env` becomes `Authorization: Bearer <token>` on
+- `DATAHUB_TOKEN` in the repo-root `.env` becomes `Authorization: Bearer <token>` on
   every request (see `DataHubClient._build_headers`).
 - No token: works only against a local quickstart with metadata-service auth
   disabled. The app logs a warning at startup in this state.

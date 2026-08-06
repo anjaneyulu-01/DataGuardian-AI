@@ -11,6 +11,7 @@ metadata, and the application never serves them.
 """
 
 import json
+import os
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from typing import Any
@@ -25,6 +26,29 @@ from app.integrations.datahub import DataHubClient, DataHubService, GraphQLClien
 
 # A transport handler: takes a request, returns a canned response.
 Handler = Callable[[httpx.Request], httpx.Response]
+
+# Environment variables that would otherwise leak a developer's real
+# configuration into the suite. Cleared for every test.
+_LEAKY_ENV_PREFIXES = ("LLM_", "XAI_", "GROQ_", "GEMINI_", "DATAHUB_", "OPENAI_")
+
+
+@pytest.fixture(autouse=True)
+def hermetic_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Isolate `Settings` from the developer's real environment.
+
+    The project keeps ONE .env at the repository root, and `Settings` resolves
+    it by absolute path — so without this fixture every `Settings()` built in a
+    test would silently inherit whatever the developer happens to have
+    configured locally. A test asserting the default provider would then pass
+    or fail depending on someone's personal API keys.
+
+    Both sources are neutralised: the .env file, and any matching variables
+    already exported in the shell.
+    """
+    monkeypatch.setitem(Settings.model_config, "env_file", None)  # type: ignore[typeddict-item]
+    for name in list(os.environ):
+        if name.upper().startswith(_LEAKY_ENV_PREFIXES):
+            monkeypatch.delenv(name, raising=False)
 
 
 @pytest.fixture

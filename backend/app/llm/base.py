@@ -79,6 +79,18 @@ class BaseLLM(ABC):
     async def health(self) -> LLMHealth:
         """Probe the provider. Reports, never raises — mirrors DataHub health."""
 
+    async def aclose(self) -> None:
+        """Release any transport the provider holds.
+
+        Part of the contract rather than an implementation detail, because
+        callers (the lifespan, `FallbackProvider`, `GovernanceAgent`) shut a
+        provider down without knowing its concrete type.
+
+        Deliberately concrete, not abstract: a provider holding no transport
+        should not be forced to write an empty override.
+        """
+        return None
+
     # -- Conveniences built on `chat` -------------------------------------------
 
     async def generate(

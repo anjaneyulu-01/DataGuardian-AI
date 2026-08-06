@@ -1,4 +1,4 @@
-import { StatusBadge } from './StatusBadge'
+import { RiskBadge } from './RiskBadge'
 import type { Severity } from '@/types/domain'
 import { timeAgo } from '@/utils/format'
 
@@ -30,7 +30,7 @@ export function Timeline({ items }: TimelineProps) {
           />
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-ink text-[13px] font-medium">{item.title}</p>
-            {item.severity ? <StatusBadge severity={item.severity} /> : null}
+            {item.severity ? <RiskBadge severity={item.severity} /> : null}
             <span className="text-faint ml-auto text-[11px]">
               {timeAgo(item.timestamp)}
             </span>

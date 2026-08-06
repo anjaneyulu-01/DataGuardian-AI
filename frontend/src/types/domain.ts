@@ -106,6 +106,14 @@ export interface AIAnswer {
   actions: string[]
 }
 
+/** A corrective action, mirroring the agent's `Recommendation` model. */
+export interface Recommendation {
+  action: string
+  rationale: string
+  priority: Severity
+  assetUrn?: string | null
+}
+
 export interface SuggestedAction {
   id: string
   title: string
@@ -120,12 +128,17 @@ export interface LineageNodeData {
   urn: string
   name: string
   platform: string
-  kind: 'source' | 'dataset' | 'dashboard'
+  /** Drives the node's icon and accent colour in the graph. */
+  kind: 'dataset' | 'pipeline' | 'dashboard' | 'model'
   owner: string | null
   severity: Severity
   tags: string[]
   description: string | null
   aiSummary: string
+  /** True for the asset the graph was traced from; highlighted in the graph. */
+  isRoot?: boolean
+  /** Set when another node is selected and this one is not connected to it. */
+  dimmed?: boolean
   [key: string]: unknown
 }
 
