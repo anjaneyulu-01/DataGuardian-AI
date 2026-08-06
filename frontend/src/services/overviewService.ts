@@ -5,10 +5,12 @@
  * today. Counts (assets, unowned, undocumented, coverage) are real: they are
  * computed by counting what DataHub actually returned.
  *
- * Week-over-week deltas and the risk trend are NOT real. They need scan
- * history, which arrives with the PostgreSQL model in a later phase, so they
- * come from demo data and are tagged `demo` so the UI can label them. Showing
- * an invented trend as fact would undermine the product's core claim.
+ * Week-over-week deltas are NOT reported at all. They need scan history,
+ * which arrives with the PostgreSQL model in a later phase. Previously this
+ * service returned demo deltas for the UI to label; that was still the wrong
+ * trade — a "+4%" on the hero is read as measured no matter how it is tagged,
+ * and one invented figure discredits every real one beside it. The risk trend
+ * remains available but is explicitly `demoOnly`.
  */
 
 import { apiClient } from './apiClient'
@@ -19,14 +21,18 @@ import {
   enterpriseMetrics,
   enterpriseRiskTrend,
 } from '@/data/enterpriseCatalogue'
-import { healthSummary } from '@/data/mockData'
 import type { ApiDatasetSummary, ApiDomain, ApiOwner, ApiPage } from '@/types/api'
 import type { ActivityEvent, HealthSummary, RiskTrendPoint } from '@/types/domain'
 
 /** Assets pulled to compute the headline figures. */
 const OVERVIEW_SAMPLE_SIZE = 100
 
-export interface OverviewMetrics extends HealthSummary {
+/**
+ * Every field here is measured by counting what DataHub returned. There is
+ * no trend, no delta, and no projection: this type carries only figures the
+ * service can point at a source for.
+ */
+export interface OverviewMetrics extends Omit<HealthSummary, 'deltas'> {
   /** Catalogue-wide documentation coverage, 0–100. */
   documentationCoverage: number
   /** Assets with no owner. */
@@ -35,8 +41,6 @@ export interface OverviewMetrics extends HealthSummary {
   domainCount: number
   /** Share of assets that appear in at least one lineage edge, 0–100. */
   lineageCoverage: number
-  /** True when the deltas are demo values rather than measured history. */
-  deltasAreEstimated: boolean
 }
 
 export async function fetchOverview(): Promise<Sourced<OverviewMetrics>> {
@@ -99,9 +103,6 @@ export async function fetchOverview(): Promise<Sourced<OverviewMetrics>> {
           ? Math.round((connected / assets.length) * 100)
           : 0,
         missingOwners,
-        // No scan history yet, so no measured week-over-week movement.
-        deltas: healthSummary.deltas,
-        deltasAreEstimated: true,
       }
     },
     () => {
@@ -117,8 +118,6 @@ export async function fetchOverview(): Promise<Sourced<OverviewMetrics>> {
         documentationCoverage: demo.documentationCoverage,
         lineageCoverage: demo.lineageCoverage,
         missingOwners: demo.missingOwners,
-        deltas: healthSummary.deltas,
-        deltasAreEstimated: true,
       }
     },
     'overviewService.metrics',

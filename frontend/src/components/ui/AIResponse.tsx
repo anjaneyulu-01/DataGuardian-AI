@@ -3,6 +3,7 @@ import {
   Brain,
   ClipboardList,
   Lightbulb,
+  Search,
   ShieldAlert,
   Sparkles,
 } from 'lucide-react'
@@ -106,23 +107,31 @@ export function AIResponse({ answer, onAction, footer }: AIResponseProps) {
           <p className="text-ink-secondary mt-2 text-[13px] leading-relaxed">
             {answer.recommendation}
           </p>
-          <div className="mt-3.5 flex flex-wrap gap-2">
-            {answer.actions.map((action, index) => (
-              <button
-                key={action}
-                type="button"
-                onClick={() => onAction?.(action)}
-                className={cn(
-                  'rounded-lg px-3.5 py-2 text-[12.5px] font-medium transition-all',
-                  index === 0
-                    ? 'bg-brand hover:bg-brand-strong text-white shadow-glow'
-                    : 'border-line bg-raised text-ink-secondary hover:border-brand/40 hover:text-ink border',
-                )}
-              >
-                {action}
-              </button>
-            ))}
-          </div>
+          {/* These buttons ask the agent a follow-up question — they do not
+              perform the remediation they name. DataGuardian is read-only
+              against DataHub, so a button labelled as though it assigns an
+              owner would be a placeholder pretending to be an action. The
+              heading and the icon make the actual behaviour explicit. */}
+          {answer.actions.length > 0 ? (
+            <div className="mt-3.5">
+              <p className="text-faint text-[10.5px] font-medium">
+                Investigate further — each opens a new agent run
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {answer.actions.map((action) => (
+                  <button
+                    key={action}
+                    type="button"
+                    onClick={() => onAction?.(action)}
+                    className="border-line bg-raised text-ink-secondary hover:border-brand/40 hover:text-ink inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12.5px] font-medium transition-colors"
+                  >
+                    <Search className="size-3.5 shrink-0" />
+                    {action}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </motion.section>
       </div>
 

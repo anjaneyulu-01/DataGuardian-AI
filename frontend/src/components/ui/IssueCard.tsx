@@ -1,4 +1,4 @@
-import { ArrowRight, GitBranch } from 'lucide-react'
+import { ArrowRight, GitBranch, Search } from 'lucide-react'
 
 import { Card } from './Card'
 import { RiskBadge } from './RiskBadge'
@@ -48,22 +48,32 @@ export function IssueCard({ finding, onInspect, onAction, compact }: IssueCardPr
         <p className="text-muted mt-1 text-[12.5px] leading-relaxed">{finding.summary}</p>
       ) : null}
 
+      {/* Recommendations are advice for a human. The button investigates
+          them; it does not carry them out — DataGuardian is read-only against
+          DataHub. The heading says so, because a bare button labelled
+          "Assign owner" would read as a control that performs the assignment. */}
       {onAction && finding.recommendations.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {finding.recommendations.slice(0, 2).map((recommendation) => (
-            <button
-              key={recommendation}
-              type="button"
-              onClick={(event) => {
-                // The card itself may be clickable; do not trigger both.
-                event.stopPropagation()
-                onAction(recommendation, finding)
-              }}
-              className="border-line bg-raised text-ink-secondary hover:border-brand/40 hover:text-ink rounded-lg border px-2.5 py-1 text-[11.5px] font-medium transition-colors"
-            >
-              {recommendation}
-            </button>
-          ))}
+        <div className="mt-3">
+          <p className="text-faint text-[10.5px] font-medium">
+            Recommended · click to investigate
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {finding.recommendations.slice(0, 2).map((recommendation) => (
+              <button
+                key={recommendation}
+                type="button"
+                onClick={(event) => {
+                  // The card itself may be clickable; do not trigger both.
+                  event.stopPropagation()
+                  onAction(recommendation, finding)
+                }}
+                className="border-line bg-raised text-ink-secondary hover:border-brand/40 hover:text-ink inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11.5px] font-medium transition-colors"
+              >
+                <Search className="size-3 shrink-0" />
+                {recommendation}
+              </button>
+            ))}
+          </div>
         </div>
       ) : null}
     </Card>

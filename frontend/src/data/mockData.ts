@@ -412,7 +412,10 @@ export const aiAnswers: AIAnswer[] = [
     ],
     recommendation:
       'Assign finance-data as owner of fct_payments today — its lineage and query history identify them as the de-facto maintainers. Batch the remaining 11 into next week’s stewardship review.',
-    actions: ['Assign Data Team', 'Generate ownership report', 'Open in Governance'],
+    actions: [
+      'Explain downstream impact of fct_payments',
+      'Which datasets are highest risk?',
+    ],
   },
   {
     id: 'highest-risk',
@@ -434,7 +437,10 @@ export const aiAnswers: AIAnswer[] = [
     ],
     recommendation:
       'Fix ownership and PII tagging on the top two first — both are one-action remediations that remove the majority of critical exposure.',
-    actions: ['Show Downstream Impact', 'Create Governance Report'],
+    actions: [
+      'Explain downstream impact of fct_payments',
+      'Create a governance report',
+    ],
   },
   {
     id: 'downstream-impact',
@@ -456,7 +462,7 @@ export const aiAnswers: AIAnswer[] = [
     ],
     recommendation:
       'Treat fct_payments as tier-1 with on-call ownership and add a freshness SLA — its blast radius already behaves like production infrastructure.',
-    actions: ['Open Lineage Explorer', 'Assign Data Team'],
+    actions: ['Find datasets without owners', 'Find untagged PII across all datasets'],
   },
   {
     id: 'generate-docs',
@@ -478,7 +484,7 @@ export const aiAnswers: AIAnswer[] = [
     ],
     recommendation:
       'Approve the 19 low-risk drafts as a batch, then review the three PII-adjacent columns with the data steward before they are written back to DataHub.',
-    actions: ['Preview documentation', 'Send for review'],
+    actions: ['Find untagged PII across all datasets', 'Create a governance report'],
   },
 ]
 
@@ -488,15 +494,16 @@ export const fallbackAnswer: AIAnswer = {
   question: '',
   reasoning: [
     'Parsed the request and mapped it to catalogue signals.',
-    'This capability ships with the live agent — the demo covers the four example prompts.',
+    'The backend is unreachable, so this is a canned demo response rather than an agent run.',
   ],
   risk: {
     level: 'low',
-    statement: 'No live agent is connected yet; responses beyond the demo prompts are illustrative.',
+    statement:
+      'The LangGraph agent answers any question when the backend is reachable. Offline, the demo covers four example prompts and anything else falls through to this notice.',
   },
   evidence: [
-    { label: 'Agent status', value: 'LangGraph workflow lands in Phase 4' },
-    { label: 'Data layer', value: 'DataHub integration live and tested' },
+    { label: 'Agent', value: 'Requires a reachable backend' },
+    { label: 'This response', value: 'Keyword-matched demo data, not an agent run' },
   ],
   recommendation: 'Try one of the example prompts to see a full investigation.',
   actions: ['Find datasets without owners', 'Which assets are highest risk?'],

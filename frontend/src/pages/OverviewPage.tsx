@@ -1,7 +1,5 @@
 import {
   Activity,
-  BarChart3,
-  BookText,
   Boxes,
   Database,
   FileText,
@@ -10,7 +8,6 @@ import {
   TriangleAlert,
   UserX,
   Users,
-  type LucideIcon,
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 
@@ -21,36 +18,12 @@ import {
   IssueCard,
   LoadingSkeleton,
   MetricCard,
-  PageHeader,
+  ScanBrief,
   SectionHeader,
   SourceTag,
 } from '@/components/ui'
 import { useActivity, useOverview, useViolations } from '@/hooks/queries'
 import { formatNumber } from '@/utils/format'
-
-/** Quick actions route into the Investigator with the prompt pre-fired. */
-const QUICK_ACTIONS: { label: string; icon: LucideIcon; prompt: string }[] = [
-  {
-    label: 'Analyze Governance',
-    icon: BarChart3,
-    prompt: 'Analyze governance health across the catalogue',
-  },
-  {
-    label: 'Generate Governance Report',
-    icon: FileText,
-    prompt: 'Create a governance report',
-  },
-  {
-    label: 'Find High Risk Assets',
-    icon: TriangleAlert,
-    prompt: 'Which datasets are highest risk?',
-  },
-  {
-    label: 'Generate Documentation',
-    icon: BookText,
-    prompt: 'Generate documentation for the least documented dataset',
-  },
-]
 
 export function OverviewPage() {
   const navigate = useNavigate()
@@ -69,38 +42,37 @@ export function OverviewPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Governance posture"
-        description={
-          metrics
-            ? `${formatNumber(metrics.totalAssets)} assets under watch in the connected DataHub instance.`
-            : 'Reading your catalogue…'
-        }
-        action={
-          overview.data ? (
-            <SourceTag source={overview.data.source} reason={overview.data.reason} />
-          ) : null
-        }
-      />
-
-      {/* KPI row. */}
+      {/* The brief leads. A steward opening this page needs the conclusion
+          first; the supporting counts are below it, not in place of it. */}
       {overview.isPending || !metrics ? (
-        <LoadingSkeleton variant="metric" count={5} />
+        <LoadingSkeleton variant="card" count={1} />
       ) : (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+        <ScanBrief
+          metrics={metrics}
+          source={overview.data?.source ?? 'demo'}
+          reason={overview.data?.reason}
+          readAt={overview.dataUpdatedAt || null}
+          onAsk={askInvestigator}
+        />
+      )}
+
+      {/* Supporting counts. No deltas: without persisted scan history there
+          is no previous value to compare against, and an estimated one reads
+          as measured no matter how it is labelled. */}
+      {overview.isPending || !metrics ? (
+        <LoadingSkeleton variant="metric" count={5} className="mt-6" />
+      ) : (
+        <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
           <MetricCard
             label="Metadata Health"
             value={metrics.score}
             suffix="/100"
             icon={Activity}
-            delta={metrics.deltas.score}
           />
           <MetricCard
             label="Critical Issues"
             value={metrics.criticalIssues}
             icon={TriangleAlert}
-            delta={metrics.deltas.criticalIssues}
-            deltaInverted
             tone="critical"
           />
           <MetricCard
@@ -128,7 +100,6 @@ export function OverviewPage() {
             value={metrics.documentationCoverage}
             suffix="%"
             icon={FileText}
-            delta={metrics.deltas.coverage}
           />
         </div>
       )}
@@ -139,7 +110,7 @@ export function OverviewPage() {
           {metrics ? (
             <>
               <HealthScore score={metrics.score} />
-              <p className="text-muted max-w-[220px] text-center text-[12.5px] leading-relaxed">
+              <p className="text-muted max-w-55 text-center text-[12.5px] leading-relaxed">
                 Composite of ownership, documentation, and classification across{' '}
                 {formatNumber(metrics.totalAssets)} assets.
               </p>
@@ -187,29 +158,6 @@ export function OverviewPage() {
               </p>
             </Card>
           )}
-        </div>
-      </div>
-
-      {/* Quick actions. */}
-      <div className="mt-8">
-        <SectionHeader
-          title="Quick Actions"
-          description="One click starts a full agent investigation."
-        />
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {QUICK_ACTIONS.map(({ label, icon: Icon, prompt }) => (
-            <Card
-              key={label}
-              interactive
-              onClick={() => askInvestigator(prompt)}
-              className="group flex flex-col gap-3 p-4"
-            >
-              <span className="border-brand/25 bg-brand/10 text-brand-strong group-hover:shadow-glow grid size-9 place-items-center rounded-lg border transition-shadow">
-                <Icon className="size-4.5" strokeWidth={2} />
-              </span>
-              <p className="text-ink text-[13px] leading-snug font-semibold">{label}</p>
-            </Card>
-          ))}
         </div>
       </div>
 

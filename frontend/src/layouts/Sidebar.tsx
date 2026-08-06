@@ -2,8 +2,10 @@ import {
   BookText,
   Bot,
   Boxes,
+  Database,
   Home,
   Network,
+  PlayCircle,
   Settings,
   ShieldCheck,
   TriangleAlert,
@@ -25,6 +27,10 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Overview', icon: Home, end: true },
   { to: '/investigator', label: 'AI Investigator', icon: Bot },
+  // Placed directly under the Investigator: it is the same capability with
+  // the typing removed, and an evaluator should meet it before the
+  // supporting pages.
+  { to: '/judge-demo', label: 'Judge Demo', icon: PlayCircle },
   { to: '/governance', label: 'Governance', icon: ShieldCheck },
   { to: '/lineage', label: 'Lineage Explorer', icon: Network },
   { to: '/documentation', label: 'Documentation', icon: BookText },
@@ -32,6 +38,7 @@ const NAV_ITEMS: NavItem[] = [
 ]
 
 const FOOTER_ITEMS: NavItem[] = [
+  { to: '/datahub', label: 'DataHub', icon: Database },
   { to: '/architecture', label: 'Architecture', icon: Boxes },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]

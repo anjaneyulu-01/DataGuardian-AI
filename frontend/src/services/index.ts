@@ -3,6 +3,15 @@ export { demoOnly, live, withFallback, type DataSource, type Sourced } from './f
 
 export { analyzeQuestion, toAIAnswer, type Investigation } from './agentService'
 export {
+  fetchDataHubReport,
+  fetchLastSync,
+  GRAPHQL_DOCUMENTS,
+  type CoverageMetric,
+  type DataHubReport,
+  type EntityBreakdown,
+  type GraphQLDocument,
+} from './datahubService'
+export {
   downloadDocument,
   fetchDocTemplates,
   generateDocument,

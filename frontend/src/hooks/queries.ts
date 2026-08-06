@@ -22,6 +22,7 @@ import {
   analyzeQuestion,
   fetchActivity,
   fetchApiHealth,
+  fetchDataHubReport,
   fetchDataHubStatus,
   fetchDocTemplates,
   fetchGovernanceAssets,
@@ -64,6 +65,9 @@ export const queryKeys = {
   },
   documentation: {
     templates: ['documentation', 'templates'] as const,
+  },
+  datahub: {
+    report: ['datahub', 'report'] as const,
   },
 } as const
 
@@ -121,6 +125,23 @@ export function useActivity() {
     queryKey: queryKeys.overview.activity,
     queryFn: fetchActivity,
     staleTime: METADATA_STALE_MS,
+  })
+}
+
+/* --- DataHub --------------------------------------------------------------- */
+
+/**
+ * The DataHub integration report.
+ *
+ * Shorter stale time than other metadata: this page is the evidence that the
+ * connection is live, so a stale cache entry would undercut the thing it is
+ * there to show.
+ */
+export function useDataHubReport() {
+  return useQuery({
+    queryKey: queryKeys.datahub.report,
+    queryFn: fetchDataHubReport,
+    staleTime: HEALTH_STALE_MS,
   })
 }
 

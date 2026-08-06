@@ -5,7 +5,6 @@ import {
   FileBarChart,
   ScanSearch,
   ShieldAlert,
-  Terminal,
   Unlink,
   UserX,
   type LucideIcon,
@@ -16,8 +15,8 @@ import { useLocation } from 'react-router'
 import { AgentTrace } from '@/components/ui/AgentTrace'
 import {
   AIResponse,
+  AnalysisDetail,
   Card,
-  ExecutionTimeline,
   LoadingState,
   PageHeader,
   PromptInput,
@@ -106,8 +105,6 @@ interface Exchange {
 export function InvestigatorPage() {
   const location = useLocation()
   const [exchanges, setExchanges] = useState<Exchange[]>([])
-  // Developer mode reveals the full node-by-node pipeline for each answer.
-  const [devMode, setDevMode] = useState(false)
   const nextId = useRef(1)
   const bottomRef = useRef<HTMLDivElement>(null)
   const firedFor = useRef<string | null>(null)
@@ -166,22 +163,6 @@ export function InvestigatorPage() {
         <PageHeader
           title="AI Investigator"
           description="The agent plans its own tools, gathers evidence, then explains what it found."
-          action={
-            <button
-              type="button"
-              onClick={() => setDevMode((on) => !on)}
-              aria-pressed={devMode}
-              title="Show the full execution pipeline for each answer"
-              className={
-                devMode
-                  ? 'border-brand/40 bg-brand/12 text-ink inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-medium'
-                  : 'border-line bg-surface text-muted hover:text-ink inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-colors'
-              }
-            >
-              <Terminal className="size-3.5" />
-              Developer mode
-            </button>
-          }
         />
       )}
 
@@ -256,16 +237,12 @@ export function InvestigatorPage() {
               }
             />
 
-            {/* Full pipeline, developer mode only. The collapsed AgentTrace
-                above is enough for most readers; this is the deep view. */}
-            {devMode && exchange.raw ? (
-              <Card className="mt-4 p-5">
-                <ExecutionTimeline
-                  trace={exchange.raw.trace}
-                  durationMs={exchange.raw.duration_ms}
-                  provider={exchange.raw.llm_provider}
-                />
-              </Card>
+            {/* The evidence panel: score arithmetic, execution pipeline, and
+                business impact. Always shown — these are the features that
+                distinguish an agent from a chatbot, and a judge or steward
+                will not go looking for them behind a toggle. */}
+            {exchange.raw ? (
+              <AnalysisDetail result={exchange.raw} source={exchange.source} />
             ) : null}
 
             {exchange.raw && exchange.raw.recommendations.length > 0 ? (

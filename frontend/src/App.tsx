@@ -32,6 +32,12 @@ const RiskCenterPage = lazy(() =>
 const ArchitecturePage = lazy(() =>
   import('@/pages/ArchitecturePage').then((m) => ({ default: m.ArchitecturePage })),
 )
+const DataHubPage = lazy(() =>
+  import('@/pages/DataHubPage').then((m) => ({ default: m.DataHubPage })),
+)
+const JudgeDemoPage = lazy(() =>
+  import('@/pages/JudgeDemoPage').then((m) => ({ default: m.JudgeDemoPage })),
+)
 const SettingsPage = lazy(() =>
   import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 )
@@ -98,6 +104,22 @@ function App() {
           element={
             <Page>
               <RiskCenterPage />
+            </Page>
+          }
+        />
+        <Route
+          path="datahub"
+          element={
+            <Page>
+              <DataHubPage />
+            </Page>
+          }
+        />
+        <Route
+          path="judge-demo"
+          element={
+            <Page>
+              <JudgeDemoPage />
             </Page>
           }
         />
